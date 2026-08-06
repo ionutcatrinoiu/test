@@ -10817,12 +10817,16 @@ html>.sphera-edit-popup.modal.open>.wizard{
       ...(hasAdd?[{key:'add',label:'ADD'}]:[])
     ];
     const heads=columns.map(column=>'<div class="mobile-rx-column-head">'+escapeHtml(column.label)+'</div>').join('');
+    const productLines=productText(order).split(/\n+/).map(line=>clean(line)).filter(Boolean);
+    const productHtml=(productLines.length?productLines:['']).map(line=>'<span class="mobile-rx-product-line">'+escapeHtml(line)+'</span>').join('');
+    const notes=clean(order.notes);
     return '<div class="mobile-rx-card-content">'+
       '<div class="mobile-rx-code"><span class="mobile-rx-label">Cod RX</span><span class="mobile-rx-code-value">'+escapeHtml(order.code||'')+'</span></div>'+
       '<div class="mobile-rx-meta"><div><span class="mobile-rx-label">Centru</span><span class="mobile-rx-meta-value">'+escapeHtml(centerText(order))+'</span></div><div class="mobile-rx-client"><span class="mobile-rx-label">Client</span><span class="mobile-rx-meta-value">'+escapeHtml(order.client?.name||'')+'</span></div></div>'+
-      '<div class="mobile-rx-section"><span class="mobile-rx-label">Produs</span><span class="mobile-rx-product-value" title="'+escapeHtml(productText(order))+'">'+escapeHtml(productText(order))+'</span></div>'+
+      '<div class="mobile-rx-section"><span class="mobile-rx-label">Produs</span><div class="mobile-rx-product-value">'+productHtml+'</div></div>'+
       '<div class="mobile-rx-section"><span class="mobile-rx-label">Dioptrii</span><div class="mobile-rx-diopters-scroll"><div class="mobile-rx-diopters-grid" style="--rx-data-cols:'+columns.length+'"><div></div>'+heads+'<div class="mobile-rx-eye">OD</div>'+eyeValues(order,'OD',columns)+'<div class="mobile-rx-eye">OS</div>'+eyeValues(order,'OS',columns)+'</div></div></div>'+
       '<div class="mobile-rx-patient"><span class="mobile-rx-label">Pacient:</span><span class="mobile-rx-patient-value">'+escapeHtml(order.patient||'')+'</span></div>'+
+      (notes?'<div class="mobile-rx-notes"><span class="mobile-rx-label">Mențiuni:</span><span class="mobile-rx-notes-value">'+escapeHtml(notes)+'</span></div>':'')+
       '</div>';
   }
 
@@ -10845,6 +10849,338 @@ html>.sphera-edit-popup.modal.open>.wizard{
   decorateRows();
 })();
 </script>
+<style id="sphera-mobile-rx-status-clients-final">
+@media screen and (max-width:760px){
+  .mobile-rx-product-value{
+    display:grid!important;
+    gap:4px!important;
+    white-space:normal!important;
+    overflow:visible!important;
+    text-overflow:clip!important;
+  }
+  .mobile-rx-product-line{
+    display:block!important;
+    width:100%!important;
+    color:#101828!important;
+    font-size:13px!important;
+    font-weight:750!important;
+    line-height:1.35!important;
+    white-space:normal!important;
+    overflow:visible!important;
+    overflow-wrap:anywhere!important;
+    text-overflow:clip!important;
+  }
+  .mobile-rx-notes{
+    margin-top:8px!important;
+    padding-top:9px!important;
+    border-top:1px solid #eef1f5!important;
+    font-size:12.5px!important;
+    line-height:1.35!important;
+  }
+  .mobile-rx-notes .mobile-rx-label{
+    display:inline!important;
+    margin-right:5px!important;
+  }
+  .mobile-rx-notes-value{
+    color:#344054!important;
+    font-weight:550!important;
+    white-space:pre-wrap!important;
+    overflow-wrap:anywhere!important;
+  }
+  #ordersListBox tbody tr.mobile-rx-decorated>td.status-cell,
+  #ordersListBox tbody tr.mobile-rx-decorated>td.delete-cell{
+    top:10px!important;
+  }
+  #ordersListBox tbody tr.mobile-rx-decorated>td.status-cell{
+    right:52px!important;
+  }
+  #ordersListBox tbody tr.mobile-rx-decorated>td.delete-cell{
+    right:10px!important;
+  }
+
+  #processingPage .processing-status-panel{
+    padding:14px!important;
+    border-radius:18px!important;
+  }
+  #processingPage .processing-status-copy h2{
+    font-size:21px!important;
+    line-height:1.1!important;
+  }
+  #processingPage .processing-status-copy .muted{
+    margin-top:4px!important;
+    font-size:12px!important;
+    line-height:1.35!important;
+  }
+  #processingPage .processing-filters{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) auto!important;
+    gap:8px!important;
+    margin-top:12px!important;
+  }
+  #processingPage .processing-filters input{
+    min-width:0!important;
+    height:42px!important;
+    padding:9px 11px!important;
+    font-size:12.5px!important;
+  }
+  #processingOrdersList{
+    display:grid!important;
+    gap:10px!important;
+    margin-top:10px!important;
+  }
+  #processingOrdersList .workflow-order{
+    width:100%!important;
+    min-width:0!important;
+    padding:14px!important;
+    border-radius:17px!important;
+    overflow:visible!important;
+    box-shadow:0 3px 12px rgba(16,24,40,.045)!important;
+  }
+  #processingOrdersList .workflow-head,
+  #processingOrdersList .workflow-head.no-notes{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+    gap:11px 14px!important;
+    width:100%!important;
+    min-width:0!important;
+  }
+  #processingOrdersList .workflow-head>div{
+    min-width:0!important;
+  }
+  #processingOrdersList .workflow-head>div:nth-child(5),
+  #processingOrdersList .workflow-head>div:nth-child(6){
+    grid-column:1/-1!important;
+  }
+  #processingOrdersList .workflow-label{
+    margin-bottom:3px!important;
+    font-size:9px!important;
+    letter-spacing:.3px!important;
+  }
+  #processingOrdersList .workflow-value{
+    max-width:100%!important;
+    font-size:13px!important;
+    line-height:1.3!important;
+    white-space:normal!important;
+    overflow:visible!important;
+    overflow-wrap:anywhere!important;
+    text-overflow:clip!important;
+  }
+  #processingOrdersList .workflow-rx-code{
+    font-size:14px!important;
+  }
+  #processingOrdersList .workflow-track{
+    position:relative!important;
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    min-width:0!important;
+    width:100%!important;
+    margin-top:13px!important;
+    gap:7px!important;
+    padding:0!important;
+    overflow:visible!important;
+  }
+  #processingOrdersList .workflow-progress{
+    display:none!important;
+  }
+  #processingOrdersList .workflow-step{
+    position:relative!important;
+    display:grid!important;
+    grid-template-columns:24px minmax(0,1fr)!important;
+    align-items:center!important;
+    justify-items:start!important;
+    gap:7px!important;
+    width:100%!important;
+    min-width:0!important;
+    min-height:40px!important;
+    padding:6px 8px!important;
+    border:1px solid #e1e6ed!important;
+    border-radius:12px!important;
+    background:#f8fafc!important;
+    color:#667085!important;
+    text-align:left!important;
+  }
+  #processingOrdersList .workflow-step.done{
+    border-color:#c7d7ff!important;
+    background:#f4f7ff!important;
+    color:#165dff!important;
+  }
+  #processingOrdersList .workflow-step.active{
+    border-color:#165dff!important;
+    background:#eef4ff!important;
+    color:#165dff!important;
+  }
+  #processingOrdersList .workflow-step .workflow-dot{
+    position:static!important;
+    display:flex!important;
+    width:24px!important;
+    min-width:24px!important;
+    height:24px!important;
+    align-items:center!important;
+    justify-content:center!important;
+    border-width:1px!important;
+    font-size:10px!important;
+  }
+  #processingOrdersList .workflow-step>span:last-child{
+    min-width:0!important;
+    font-size:10.5px!important;
+    font-weight:750!important;
+    line-height:1.15!important;
+    white-space:normal!important;
+    overflow-wrap:anywhere!important;
+  }
+  #processingOrdersList .workflow-readonly{
+    margin-top:10px!important;
+    padding:9px 10px!important;
+    font-size:10.5px!important;
+    line-height:1.35!important;
+  }
+
+  body:has(#clientsPage:not(.hide)) .main>.top{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) auto!important;
+    align-items:center!important;
+    gap:10px!important;
+  }
+  body:has(#clientsPage:not(.hide)) .main>.top>div:first-child{
+    min-width:0!important;
+  }
+  body:has(#clientsPage:not(.hide)) .main>.top-actions{
+    display:flex!important;
+    width:auto!important;
+    min-width:0!important;
+    margin:0!important;
+    justify-content:flex-end!important;
+  }
+  body:has(#clientsPage:not(.hide)) #newClientBtn{
+    display:inline-flex!important;
+    width:auto!important;
+    min-width:0!important;
+    min-height:42px!important;
+    margin:0!important;
+    padding:0 14px!important;
+    border-radius:13px!important;
+    font-size:12px!important;
+    white-space:nowrap!important;
+  }
+  #clientsPage>.card:first-child{
+    padding:14px!important;
+  }
+  #clientsPage>.card:first-child h2{
+    font-size:21px!important;
+  }
+  #clientsPage>.card:first-child .muted{
+    margin-top:4px!important;
+    font-size:12px!important;
+    line-height:1.35!important;
+  }
+  #clientsPage .clients-filter-row{
+    margin-top:12px!important;
+  }
+  #clientsPage>.card:nth-of-type(2){
+    padding:10px!important;
+    overflow:hidden!important;
+  }
+  #clientsPage .table-wrap{
+    width:100%!important;
+    max-width:100%!important;
+    overflow:visible!important;
+  }
+  #clientsPage table,
+  #clientsPage tbody{
+    display:block!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+  }
+  #clientsPage thead{
+    display:none!important;
+  }
+  #clientRows tr{
+    position:relative!important;
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+    gap:10px!important;
+    width:100%!important;
+    min-width:0!important;
+    margin:0 0 9px!important;
+    padding:12px!important;
+    border:1px solid #e1e6ed!important;
+    border-radius:15px!important;
+    background:#fff!important;
+  }
+  #clientRows tr:last-child{margin-bottom:0!important;}
+  #clientRows td{
+    display:block!important;
+    width:auto!important;
+    min-width:0!important;
+    max-width:none!important;
+    padding:0!important;
+    border:0!important;
+    overflow:visible!important;
+    text-align:left!important;
+  }
+  #clientRows td::before{
+    display:block!important;
+    margin-bottom:3px!important;
+    color:#667085!important;
+    font-size:8.5px!important;
+    font-weight:850!important;
+    letter-spacing:.3px!important;
+    text-transform:uppercase!important;
+  }
+  #clientRows td:nth-child(1){
+    grid-column:1/-1!important;
+    padding-right:42px!important;
+  }
+  #clientRows td:nth-child(1)::before{content:"Client";}
+  #clientRows td:nth-child(2)::before{content:"Localitate";}
+  #clientRows td.client-cui-cell::before{content:"CUI";}
+  #clientRows td:nth-last-child(2)::before{content:"Cod";}
+  #clientRows td input{
+    width:100%!important;
+    min-width:0!important;
+    height:auto!important;
+    min-height:0!important;
+    padding:0!important;
+    border:0!important;
+    border-radius:0!important;
+    background:transparent!important;
+    color:#101828!important;
+    box-shadow:none!important;
+    font-size:12.5px!important;
+    font-weight:600!important;
+    line-height:1.35!important;
+    white-space:normal!important;
+    overflow:visible!important;
+    text-overflow:clip!important;
+  }
+  #clientRows td:last-child{
+    position:absolute!important;
+    top:9px!important;
+    right:9px!important;
+    display:flex!important;
+    width:34px!important;
+    min-width:34px!important;
+    height:34px!important;
+    align-items:center!important;
+    justify-content:center!important;
+  }
+  #clientRows td:last-child::before{display:none!important;}
+  #clientRows td:last-child .client-actions,
+  #clientRows td:last-child .table-action{
+    width:34px!important;
+    min-width:34px!important;
+    height:34px!important;
+    margin:0!important;
+  }
+  #clientRows td[colspan]{
+    grid-column:1/-1!important;
+    padding:16px!important;
+    text-align:center!important;
+  }
+  #clientRows td[colspan]::before{display:none!important;}
+}
+</style>
 <style id="sphera-order-creation-loader-style">
 #modal .wizard{position:relative}
 .order-creation-loader{
