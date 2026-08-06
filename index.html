@@ -10588,6 +10588,263 @@ html>.sphera-edit-popup.modal.open>.wizard{
   enhanceMobilePopups();
 })();
 </script>
+<style id="sphera-mobile-rx-proposal-layout">
+.mobile-rx-card-shell,.mobile-rx-card-content{display:none;}
+@media screen and (max-width:760px){
+  #ordersListBox tbody tr.mobile-rx-decorated{
+    display:block!important;
+    position:relative!important;
+    width:100%!important;
+    min-width:0!important;
+    margin:0 0 10px!important;
+    padding:13px 12px!important;
+    border:1px solid #e1e6ed!important;
+    border-radius:16px!important;
+    background:#fff!important;
+    box-shadow:0 2px 8px rgba(16,24,40,.035)!important;
+    content-visibility:auto;
+    contain-intrinsic-size:250px;
+  }
+  #ordersListBox tbody tr.mobile-rx-decorated>td:nth-child(-n+8){
+    display:none!important;
+  }
+  #ordersListBox tbody tr.mobile-rx-decorated>td.mobile-rx-card-shell{
+    display:block!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    padding:0!important;
+    border:0!important;
+    overflow:visible!important;
+    text-align:left!important;
+  }
+  #ordersListBox tbody tr.mobile-rx-decorated>td.mobile-rx-card-shell::before{display:none!important;}
+  #ordersListBox tbody tr.mobile-rx-decorated .mobile-rx-card-content{
+    display:block!important;
+    width:100%!important;
+    min-width:0!important;
+    color:#101828!important;
+  }
+  .mobile-rx-label{
+    display:block!important;
+    margin:0 0 3px!important;
+    color:#667085!important;
+    font-family:"Montserrat",Arial,sans-serif!important;
+    font-size:8.5px!important;
+    font-weight:850!important;
+    line-height:1.15!important;
+    letter-spacing:.32px!important;
+    text-transform:uppercase!important;
+  }
+  .mobile-rx-code{
+    padding-right:86px!important;
+  }
+  .mobile-rx-code-value{
+    display:block!important;
+    font-size:16px!important;
+    font-weight:850!important;
+    line-height:1.15!important;
+    letter-spacing:.15px!important;
+    overflow-wrap:anywhere!important;
+  }
+  .mobile-rx-meta{
+    display:grid!important;
+    grid-template-columns:minmax(88px,.8fr) minmax(0,1.8fr)!important;
+    gap:8px 14px!important;
+    margin-top:11px!important;
+    padding-right:48px!important;
+    align-items:start!important;
+  }
+  .mobile-rx-meta>div{
+    min-width:0!important;
+  }
+  .mobile-rx-meta-value{
+    display:block!important;
+    font-size:12.5px!important;
+    font-weight:650!important;
+    line-height:1.3!important;
+    overflow-wrap:anywhere!important;
+  }
+  .mobile-rx-client .mobile-rx-meta-value{
+    display:-webkit-box!important;
+    -webkit-box-orient:vertical!important;
+    -webkit-line-clamp:2!important;
+    overflow:hidden!important;
+  }
+  .mobile-rx-section{
+    margin-top:11px!important;
+    padding-top:10px!important;
+    border-top:1px solid #e7ebf0!important;
+  }
+  .mobile-rx-product-value{
+    display:block!important;
+    max-width:100%!important;
+    color:#101828!important;
+    font-size:13px!important;
+    font-weight:750!important;
+    line-height:1.3!important;
+    white-space:nowrap!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+  }
+  .mobile-rx-diopters-scroll{
+    width:100%!important;
+    max-width:100%!important;
+    margin-top:7px!important;
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+    overscroll-behavior-x:contain!important;
+    -webkit-overflow-scrolling:touch!important;
+    scrollbar-width:none!important;
+  }
+  .mobile-rx-diopters-scroll::-webkit-scrollbar{display:none!important;}
+  .mobile-rx-diopters-grid{
+    display:grid!important;
+    grid-template-columns:32px repeat(var(--rx-data-cols),minmax(43px,1fr))!important;
+    width:100%!important;
+    min-width:calc(32px + var(--rx-data-cols) * 43px)!important;
+    gap:0!important;
+    align-items:center!important;
+    font-variant-numeric:tabular-nums!important;
+  }
+  .mobile-rx-diopters-grid>div{
+    min-width:0!important;
+    padding:5px 3px!important;
+    text-align:center!important;
+    white-space:nowrap!important;
+  }
+  .mobile-rx-diopters-grid .mobile-rx-column-head{
+    color:#667085!important;
+    font-size:8px!important;
+    font-weight:800!important;
+    line-height:1.05!important;
+  }
+  .mobile-rx-diopters-grid .mobile-rx-eye{
+    padding-left:0!important;
+    color:#475467!important;
+    font-size:10px!important;
+    font-weight:850!important;
+    text-align:left!important;
+  }
+  .mobile-rx-diopters-grid .mobile-rx-value{
+    color:#101828!important;
+    font-size:11.5px!important;
+    font-weight:550!important;
+    line-height:1.2!important;
+  }
+  .mobile-rx-diopters-grid .mobile-rx-eye,
+  .mobile-rx-diopters-grid .mobile-rx-value{
+    border-top:1px solid #f0f2f5!important;
+  }
+  .mobile-rx-patient{
+    margin-top:10px!important;
+    padding-top:10px!important;
+    border-top:1px solid #e7ebf0!important;
+    font-size:12.5px!important;
+    line-height:1.3!important;
+  }
+  .mobile-rx-patient .mobile-rx-label{
+    display:inline!important;
+    margin-right:5px!important;
+  }
+  .mobile-rx-patient-value{
+    font-weight:650!important;
+    overflow-wrap:anywhere!important;
+  }
+  #ordersListBox tbody tr.mobile-rx-decorated>td.status-cell,
+  #ordersListBox tbody tr.mobile-rx-decorated>td.delete-cell{
+    display:flex!important;
+    position:absolute!important;
+    right:10px!important;
+    width:36px!important;
+    min-width:36px!important;
+    height:36px!important;
+    padding:0!important;
+    align-items:center!important;
+    justify-content:center!important;
+  }
+  #ordersListBox tbody tr.mobile-rx-decorated>td.status-cell{top:10px!important;}
+  #ordersListBox tbody tr.mobile-rx-decorated>td.delete-cell{top:51px!important;}
+  #ordersListBox tbody tr.mobile-rx-decorated>td.status-cell::before,
+  #ordersListBox tbody tr.mobile-rx-decorated>td.delete-cell::before{display:none!important;}
+}
+</style>
+<script id="sphera-mobile-rx-proposal-script">
+(function(){
+  'use strict';
+  const mobileQuery=window.matchMedia('(max-width:760px)');
+  const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+  const clean=value=>String(value??'').trim();
+  const displayValue=value=>clean(value)||'—';
+
+  function findOrderByCode(code){
+    const target=clean(code).replace(/\D/g,'');
+    return (orders||[]).find(order=>clean(order?.code).replace(/\D/g,'')===target);
+  }
+
+  function centerText(order){
+    try{return processingCenterLabel(order)||order?.center||''}catch(_){return order?.center||''}
+  }
+
+  function productText(order){
+    try{return productSummary(order)||order?.design||order?.product||''}catch(_){return order?.design||order?.product||''}
+  }
+
+  function eyeValues(order,eye,columns){
+    const rx=order?.rx||{},prefix=eye.toLowerCase();
+    const values={
+      sph:rx[prefix+'Sph'],
+      cyl:rx[prefix+'Cyl'],
+      ax:rx[prefix+'Ax']||'000',
+      prism:rx[prefix+'Prism'],
+      base:rx[prefix+'Base'],
+      add:rx[prefix+'Add']
+    };
+    return columns.map(column=>'<div class="mobile-rx-value">'+escapeHtml(displayValue(values[column.key]))+'</div>').join('');
+  }
+
+  function mobileCard(order){
+    const rx=order?.rx||{};
+    const hasPrism=rx.prismEnabled===true||clean(rx.odPrism)||clean(rx.osPrism);
+    const hasBase=clean(rx.odBase)||clean(rx.osBase);
+    const hasAdd=clean(rx.odAdd)||clean(rx.osAdd);
+    const columns=[
+      {key:'sph',label:'Sferă'},
+      {key:'cyl',label:'Cilindru'},
+      {key:'ax',label:'Ax'},
+      ...(hasPrism?[{key:'prism',label:'Prismă'}]:[]),
+      ...(hasBase?[{key:'base',label:'Bază'}]:[]),
+      ...(hasAdd?[{key:'add',label:'ADD'}]:[])
+    ];
+    const heads=columns.map(column=>'<div class="mobile-rx-column-head">'+escapeHtml(column.label)+'</div>').join('');
+    return '<div class="mobile-rx-card-content">'+
+      '<div class="mobile-rx-code"><span class="mobile-rx-label">Cod RX</span><span class="mobile-rx-code-value">'+escapeHtml(order.code||'')+'</span></div>'+
+      '<div class="mobile-rx-meta"><div><span class="mobile-rx-label">Centru</span><span class="mobile-rx-meta-value">'+escapeHtml(centerText(order))+'</span></div><div class="mobile-rx-client"><span class="mobile-rx-label">Client</span><span class="mobile-rx-meta-value">'+escapeHtml(order.client?.name||'')+'</span></div></div>'+
+      '<div class="mobile-rx-section"><span class="mobile-rx-label">Produs</span><span class="mobile-rx-product-value" title="'+escapeHtml(productText(order))+'">'+escapeHtml(productText(order))+'</span></div>'+
+      '<div class="mobile-rx-section"><span class="mobile-rx-label">Dioptrii</span><div class="mobile-rx-diopters-scroll"><div class="mobile-rx-diopters-grid" style="--rx-data-cols:'+columns.length+'"><div></div>'+heads+'<div class="mobile-rx-eye">OD</div>'+eyeValues(order,'OD',columns)+'<div class="mobile-rx-eye">OS</div>'+eyeValues(order,'OS',columns)+'</div></div></div>'+
+      '<div class="mobile-rx-patient"><span class="mobile-rx-label">Pacient:</span><span class="mobile-rx-patient-value">'+escapeHtml(order.patient||'')+'</span></div>'+
+      '</div>';
+  }
+
+  function decorateRows(){
+    if(!mobileQuery.matches)return;
+    document.querySelectorAll('#orderRows>tr').forEach(row=>{
+      if(row.classList.contains('mobile-rx-decorated')||row.querySelector('td[colspan]'))return;
+      const code=row.cells?.[0]?.textContent||'';
+      const order=findOrderByCode(code);
+      if(!order)return;
+      row.insertAdjacentHTML('beforeend','<td class="mobile-rx-card-shell" colspan="8">'+mobileCard(order)+'</td>');
+      row.classList.add('mobile-rx-decorated');
+    });
+  }
+
+  const body=document.getElementById('orderRows');
+  if(body)new MutationObserver(decorateRows).observe(body,{childList:true});
+  mobileQuery.addEventListener?.('change',event=>{if(event.matches)decorateRows()});
+  window.addEventListener('resize',decorateRows);
+  decorateRows();
+})();
+</script>
 <style id="sphera-order-creation-loader-style">
 #modal .wizard{position:relative}
 .order-creation-loader{
