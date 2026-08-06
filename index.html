@@ -10316,6 +10316,278 @@ html>.sphera-edit-popup.modal.open>.wizard{
   }
 }
 </style>
+<style id="sphera-mobile-flow-refinement">
+@media screen and (max-width:760px){
+  .mobile-account-panel>.bug-menu-button{
+    width:34px!important;
+    min-width:34px!important;
+    height:42px!important;
+    min-height:42px!important;
+    margin:0 2px 0 auto!important;
+    padding:0!important;
+    border:0!important;
+    border-radius:0!important;
+    background:transparent!important;
+    color:#344054!important;
+    box-shadow:none!important;
+    appearance:none!important;
+    flex:0 0 34px!important;
+  }
+  .mobile-account-panel>.bug-menu-button:hover,
+  .mobile-account-panel>.bug-menu-button:active{
+    transform:none!important;
+    background:transparent!important;
+  }
+  .mobile-account-panel>.bug-menu-button:focus-visible{
+    outline:2px solid #165dff!important;
+    outline-offset:3px!important;
+  }
+  .mobile-account-panel>.bug-menu-button svg{
+    width:24px!important;
+    height:24px!important;
+    stroke:currentColor!important;
+  }
+
+  .side.mobile-bug-opening>.menu,
+  .side.mobile-bug-opening>.mobile-account-panel{
+    display:none!important;
+    max-height:0!important;
+    opacity:0!important;
+    visibility:hidden!important;
+    transform:none!important;
+    filter:none!important;
+    transition:none!important;
+  }
+
+  #ordersListBox .table-wrap{
+    overscroll-behavior:contain!important;
+    -webkit-overflow-scrolling:touch!important;
+  }
+  #ordersListBox tbody tr{
+    grid-template-columns:repeat(6,minmax(0,1fr))!important;
+    gap:8px 10px!important;
+    padding:12px 54px 12px 12px!important;
+    border-color:#e7ebf0!important;
+    border-radius:15px!important;
+    box-shadow:0 2px 8px rgba(16,24,40,.035)!important;
+    content-visibility:auto;
+    contain-intrinsic-size:230px;
+  }
+  #ordersListBox tbody td{
+    font-size:12.5px!important;
+    line-height:1.25!important;
+  }
+  #ordersListBox tbody td::before{
+    margin-bottom:2px!important;
+    font-size:8.5px!important;
+    letter-spacing:.3px!important;
+  }
+  #ordersListBox tbody td:nth-child(1){grid-column:1/-1!important;}
+  #ordersListBox tbody td:nth-child(2){grid-column:span 2!important;}
+  #ordersListBox tbody td:nth-child(3){grid-column:span 4!important;}
+  #ordersListBox tbody td:nth-child(4){
+    grid-column:1/-1!important;
+    margin-top:2px!important;
+    padding-top:8px!important;
+    border-top:1px solid #eef1f5!important;
+  }
+  #ordersListBox tbody td:nth-child(5),
+  #ordersListBox tbody td:nth-child(6),
+  #ordersListBox tbody td:nth-child(7){
+    grid-column:span 2!important;
+    margin-top:2px!important;
+    padding-top:8px!important;
+    border-top:1px solid #eef1f5!important;
+  }
+  #ordersListBox tbody td:nth-child(8){
+    grid-column:1/-1!important;
+    margin-top:1px!important;
+  }
+  #ordersListBox tbody td:nth-child(1) b{
+    font-size:15.5px!important;
+    line-height:1.15!important;
+  }
+  #ordersListBox tbody td:nth-child(2) b{
+    font-size:12.5px!important;
+  }
+  #ordersListBox tbody td:nth-child(3),
+  #ordersListBox tbody td:nth-child(8){
+    display:block!important;
+    max-height:44px!important;
+    overflow:hidden!important;
+  }
+  #ordersListBox tbody td:nth-child(3)::before,
+  #ordersListBox tbody td:nth-child(8)::before{
+    display:block!important;
+  }
+  #ordersListBox .product-name{
+    font-size:13px!important;
+    line-height:1.2!important;
+  }
+  #ordersListBox .product-details{
+    display:-webkit-box!important;
+    margin-top:2px!important;
+    -webkit-box-orient:vertical!important;
+    -webkit-line-clamp:2!important;
+    overflow:hidden!important;
+    color:#667085!important;
+    font-size:11.5px!important;
+    line-height:1.25!important;
+  }
+  #ordersListBox .rx-diopters,
+  #ordersListBox .rx-axis,
+  #ordersListBox .add-value{
+    font-size:12px!important;
+    line-height:1.25!important;
+  }
+  #ordersListBox tbody td.status-cell,
+  #ordersListBox tbody td.delete-cell{
+    right:9px!important;
+    width:36px!important;
+    min-width:36px!important;
+    height:36px!important;
+  }
+  #ordersListBox tbody td.status-cell{top:10px!important;}
+  #ordersListBox tbody td.delete-cell{top:51px!important;}
+  #ordersListBox tbody .table-action{
+    width:36px!important;
+    min-width:36px!important;
+    height:36px!important;
+  }
+
+  .modal.open.mobile-long-popup{
+    position:fixed!important;
+    inset:88px 0 0!important;
+    width:100%!important;
+    height:calc(100dvh - 88px)!important;
+    padding:8px 10px max(10px,env(safe-area-inset-bottom))!important;
+    align-items:flex-start!important;
+    justify-content:center!important;
+    overflow:hidden!important;
+    box-sizing:border-box!important;
+  }
+  .modal.open.mobile-long-popup>.wizard{
+    position:relative!important;
+    width:100%!important;
+    max-width:100%!important;
+    max-height:calc(100dvh - 106px)!important;
+    margin:0!important;
+    padding:14px 15px 76px!important;
+    border-radius:19px!important;
+    overflow-x:hidden!important;
+    overflow-y:auto!important;
+    overscroll-behavior:contain!important;
+    -webkit-overflow-scrolling:touch!important;
+    scroll-padding-top:54px!important;
+  }
+  .mobile-popup-close{
+    position:sticky!important;
+    top:0!important;
+    z-index:50!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    width:38px!important;
+    min-width:38px!important;
+    height:38px!important;
+    margin:0 0 -38px auto!important;
+    padding:0!important;
+    border:1px solid #dbe4f0!important;
+    border-radius:50%!important;
+    background:rgba(255,255,255,.96)!important;
+    color:#101828!important;
+    box-shadow:0 7px 18px rgba(16,24,40,.12)!important;
+    font-size:24px!important;
+    font-weight:400!important;
+    line-height:1!important;
+    backdrop-filter:blur(8px)!important;
+  }
+  .mobile-long-popup .order-number-row,
+  .mobile-long-popup>.wizard>.top{
+    padding-right:46px!important;
+  }
+  .mobile-long-popup .order-detail-group{
+    grid-template-columns:108px minmax(0,1fr)!important;
+    gap:7px 9px!important;
+    padding:13px 0!important;
+  }
+  .mobile-long-popup .order-detail-label{
+    font-size:13px!important;
+  }
+  .mobile-long-popup .order-detail-value{
+    font-size:13px!important;
+    line-height:1.35!important;
+  }
+  .mobile-long-popup .order-details-actions,
+  .mobile-long-popup .icon-btns{
+    position:sticky!important;
+    bottom:0!important;
+    z-index:40!important;
+    margin:18px -15px -76px!important;
+    padding:12px 15px max(14px,env(safe-area-inset-bottom))!important;
+    background:rgba(255,255,255,.94)!important;
+    border-top:1px solid #e4e7ec!important;
+    backdrop-filter:blur(10px)!important;
+  }
+}
+</style>
+<script id="sphera-mobile-flow-refinement-script">
+(function(){
+  'use strict';
+  const mobileQuery=window.matchMedia('(max-width:760px)');
+
+  function closeMobileMenuNow(){
+    if(!mobileQuery.matches)return;
+    const side=document.querySelector('.side');
+    const toggle=side?.querySelector('.mobile-menu-toggle');
+    if(!side)return;
+    side.classList.add('mobile-bug-opening');
+    side.classList.remove('mobile-menu-open');
+    toggle?.setAttribute('aria-expanded','false');
+    toggle?.setAttribute('aria-label','Deschide meniul');
+    setTimeout(()=>side.classList.remove('mobile-bug-opening'),120);
+  }
+
+  function addMobileClose(modal){
+    if(!mobileQuery.matches||!modal?.classList.contains('open'))return;
+    const wizard=modal.querySelector(':scope>.wizard');
+    if(!wizard)return;
+    const knownLong=modal.matches('.order-details-modal,.order-edit-modal,.sphera-details-popup,.sphera-edit-popup,.shipping-group-modal');
+    const available=Math.max(320,window.innerHeight-106);
+    if(!knownLong&&wizard.scrollHeight<=available)return;
+    modal.classList.add('mobile-long-popup');
+    if(wizard.querySelector(':scope>.mobile-popup-close'))return;
+    const close=document.createElement('button');
+    close.type='button';
+    close.className='mobile-popup-close';
+    close.setAttribute('aria-label','Închide popupul');
+    close.title='Închide';
+    close.textContent='×';
+    close.onclick=()=>modal.remove();
+    wizard.prepend(close);
+  }
+
+  function enhanceMobilePopups(root=document){
+    if(!mobileQuery.matches)return;
+    root.querySelectorAll?.('.modal.open').forEach(modal=>requestAnimationFrame(()=>addMobileClose(modal)));
+    if(root.matches?.('.modal.open'))requestAnimationFrame(()=>addMobileClose(root));
+    if(root.matches?.('.bug-report-modal')||root.querySelector?.('.bug-report-modal'))closeMobileMenuNow();
+  }
+
+  document.addEventListener('click',event=>{
+    if(mobileQuery.matches&&event.target.closest?.('#menuBug'))closeMobileMenuNow();
+    const modal=event.target;
+    if(mobileQuery.matches&&modal?.matches?.('.modal.open.mobile-long-popup'))modal.remove();
+  },true);
+
+  const observer=new MutationObserver(records=>records.forEach(record=>record.addedNodes.forEach(node=>{
+    if(node.nodeType===1)enhanceMobilePopups(node);
+  })));
+  observer.observe(document.body,{childList:true,subtree:true});
+  window.addEventListener('resize',()=>enhanceMobilePopups());
+  enhanceMobilePopups();
+})();
+</script>
 <style id="sphera-order-creation-loader-style">
 #modal .wizard{position:relative}
 .order-creation-loader{
