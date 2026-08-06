@@ -8844,9 +8844,10 @@ html>.sphera-edit-popup.modal.open>.wizard{
   function installLadybug(){const button=document.getElementById('menuBug');if(!button)return;if(button.dataset.v92Icon!=='ready'){button.innerHTML=ladybugSvg;button.dataset.v92Icon='ready'}button.onclick=window.openBugDialog;button.title='Raportează un bug';button.setAttribute('aria-label','Raportează un bug')}
   window.openBugDialog=function(){
     const existing=document.querySelector('.bug-report-modal');if(existing){existing.querySelector('#bugDescription')?.focus();return}
-    const wrap=document.createElement('div');wrap.className='modal open bug-report-modal';wrap.innerHTML='<div class="wizard alert-card bug-form" style="max-width:560px"><div class="alert-icon" style="background:#fff1f1;color:#f04438">🐞</div><div class="alert-title">Raportează un bug</div><div class="alert-text">Descrie problema. Pentru printscreen, copiază imaginea și apasă Ctrl+V.</div><div class="field" style="text-align:left"><label>Descriere</label><textarea id="bugDescription" placeholder="Spune ce ai făcut și ce rezultat ai observat."></textarea></div><div class="field" style="text-align:left"><label>Printscreen opțional</label><div class="bug-paste-zone" id="bugPasteZone">Copiază printscreenul și apasă Ctrl+V</div><div class="bug-upload-name" id="bugUploadName"></div><img class="bug-screenshot-preview" id="bugScreenshotPreview" alt="Previzualizare printscreen"><div class="err" id="bugError"></div></div><div class="alert-actions"><button class="btn cancel">Anulează</button><button class="btn ok">Trimite</button></div></div>';document.body.appendChild(wrap);
-    let screenshot='';const preview=wrap.querySelector('#bugScreenshotPreview'),err=wrap.querySelector('#bugError'),name=wrap.querySelector('#bugUploadName'),pasteZone=wrap.querySelector('#bugPasteZone');
+    const wrap=document.createElement('div');wrap.className='modal open bug-report-modal';wrap.innerHTML='<div class="wizard alert-card bug-form" style="max-width:560px"><div class="alert-icon" style="background:#fff1f1;color:#f04438">🐞</div><div class="alert-title">Raportează un bug</div><div class="alert-text">Descrie problema. Pentru printscreen, copiază imaginea și apasă Ctrl+V.</div><div class="field" style="text-align:left"><label>Descriere</label><textarea id="bugDescription" placeholder="Spune ce ai făcut și ce rezultat ai observat."></textarea></div><div class="field" style="text-align:left"><label>Printscreen opțional</label><div class="bug-paste-zone" id="bugPasteZone">Copiază printscreenul și apasă Ctrl+V</div><div class="bug-mobile-upload" style="display:none"><input id="bugMobileScreenshot" type="file" accept="image/png,image/jpeg,image/webp" hidden><label class="bug-mobile-upload-button" for="bugMobileScreenshot"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0L7 9m5-5 5 5M5 14v5h14v-5"></path></svg><span>Alege imaginea</span></label></div><div class="bug-upload-name" id="bugUploadName"></div><img class="bug-screenshot-preview" id="bugScreenshotPreview" alt="Previzualizare printscreen"><div class="err" id="bugError"></div></div><div class="alert-actions"><button class="btn cancel">Anulează</button><button class="btn ok">Trimite</button></div></div>';document.body.appendChild(wrap);
+    let screenshot='';const preview=wrap.querySelector('#bugScreenshotPreview'),err=wrap.querySelector('#bugError'),name=wrap.querySelector('#bugUploadName'),pasteZone=wrap.querySelector('#bugPasteZone'),mobileFile=wrap.querySelector('#bugMobileScreenshot');
     async function acceptImage(blob,label){err.textContent='';pasteZone.classList.add('active');pasteZone.textContent='Se procesează imaginea...';try{screenshot=await resizeImage(blob);preview.src=screenshot;preview.style.display='block';name.textContent=label||'Imagine lipită din clipboard';pasteZone.textContent='Imagine atașată. Poți lipi alta cu Ctrl+V.'}catch(e){screenshot='';preview.style.display='none';err.textContent=e.message;pasteZone.textContent='Sau copiază printscreenul și apasă Ctrl+V'}finally{setTimeout(()=>pasteZone.classList.remove('active'),500)}}
+    if(window.matchMedia('(max-width:760px)').matches){wrap.querySelector('.alert-text').textContent='Descrie problema și atașează un printscreen, dacă te ajută.';mobileFile.onchange=()=>{const file=mobileFile.files?.[0];if(file)acceptImage(file,file.name)}}
     wrap.addEventListener('paste',event=>{const item=[...(event.clipboardData?.items||[])].find(x=>String(x.type).startsWith('image/'));if(!item)return;event.preventDefault();const blob=item.getAsFile();if(blob)acceptImage(blob,'Printscreen lipit din clipboard')});
     wrap.querySelector('.cancel').onclick=()=>wrap.remove();
     wrap.querySelector('.ok').onclick=async()=>{const description=String(wrap.querySelector('#bugDescription').value||'').trim();if(description.length<8){err.textContent='Descrie problema în cel puțin 8 caractere.';return}const item={id:'BUG'+Date.now(),description,screenshot,userName:currentUser?.name||currentUser?.username||'Utilizator',username:currentUser?.username||'',role:currentUser?.role||'',center:currentUser?.center||'',createdAt:Date.now(),status:'Nou'},list=readBugs();list.unshift(item);try{localStorage.setItem(BUG_KEY,JSON.stringify(list.slice(0,200)))}catch(_){err.textContent='Imaginea este prea mare pentru stocare. Alege o imagine mai mică.';return}try{if(!window.SPHERA_DB)throw new Error('Conexiunea cloud nu este disponibilă.');await window.SPHERA_DB.collection('bugReports').doc(item.id).set(item)}catch(e){err.textContent='Raportul nu a putut fi salvat online.';return}wrap.remove();renderBugReports();showAppConfirm({title:'Raport trimis',text:'Raportarea ta a fost înregistrată.',confirmText:'OK'})};
@@ -10044,6 +10045,103 @@ html>.sphera-edit-popup.modal.open>.wizard{
     showAppConfirm({title:'Actualizează grupul',text:'Actualizezi toate cele '+members.length+' comenzi din '+groupLabel(order)+' la statusul '+status+'?',confirmText:'Actualizează grupul',cancelText:'Anulează',onConfirm:()=>{groupStatusRunning=true;try{members.forEach(item=>{if(typeof canSetWorkflowStep!=='function'||canSetWorkflowStep(status,item))priorStatus.call(window,item.id,status)})}finally{groupStatusRunning=false}save();render()}});return false
   };
   setTimeout(decorateDashboardGroups,0)
+})();
+</script>
+<style id="sphera-mobile-bug-controls">
+@media screen and (max-width:760px){
+  .mobile-account-panel>.bug-menu-button{
+    display:inline-flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    width:42px!important;
+    min-width:42px!important;
+    height:42px!important;
+    min-height:42px!important;
+    margin:0 0 0 auto!important;
+    padding:0!important;
+    border:1px solid #fecdd3!important;
+    border-radius:13px!important;
+    background:#fff7f7!important;
+    color:#e11d48!important;
+    box-shadow:none!important;
+    flex:0 0 42px!important;
+  }
+  .mobile-account-panel>.bug-menu-button svg{
+    width:21px!important;
+    height:21px!important;
+  }
+  .mobile-account-panel>.mobile-logout-btn{
+    margin-left:0!important;
+  }
+  .bug-report-modal .bug-paste-zone{
+    display:none!important;
+  }
+  .bug-report-modal .bug-mobile-upload{
+    display:block!important;
+    width:100%!important;
+  }
+  .bug-report-modal .bug-mobile-upload-button{
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    gap:9px!important;
+    width:100%!important;
+    min-height:48px!important;
+    padding:10px 14px!important;
+    border:1px dashed #f04438!important;
+    border-radius:14px!important;
+    background:#fff7f7!important;
+    color:#d92d20!important;
+    font-weight:850!important;
+    cursor:pointer!important;
+  }
+  .bug-report-modal .bug-mobile-upload-button svg{
+    width:20px!important;
+    height:20px!important;
+    fill:none!important;
+    stroke:currentColor!important;
+    stroke-width:2!important;
+    stroke-linecap:round!important;
+    stroke-linejoin:round!important;
+  }
+  .bug-report-modal .bug-upload-name:not(:empty){
+    margin-top:8px!important;
+  }
+}
+</style>
+<script id="sphera-mobile-bug-position">
+(function(){
+  'use strict';
+  const mobileQuery=window.matchMedia('(max-width:760px)');
+
+  function positionBugButton(){
+    const bug=document.getElementById('menuBug');
+    const menu=document.querySelector('.side>.menu');
+    const panel=document.querySelector('.mobile-account-panel');
+    const logout=panel?.querySelector('.mobile-logout-btn');
+    if(!bug||!menu||!panel||!logout)return;
+    if(mobileQuery.matches){
+      if(bug.parentElement!==panel)panel.insertBefore(bug,logout);
+    }else if(bug.parentElement!==menu){
+      menu.appendChild(bug);
+    }
+  }
+
+  document.addEventListener('click',event=>{
+    const bug=event.target.closest?.('#menuBug');
+    if(!bug||!mobileQuery.matches)return;
+    const side=bug.closest('.side');
+    const toggle=side?.querySelector('.mobile-menu-toggle');
+    side?.classList.remove('mobile-menu-open');
+    toggle?.setAttribute('aria-expanded','false');
+    toggle?.setAttribute('aria-label','Deschide meniul');
+  },true);
+
+  const observer=new MutationObserver(positionBugButton);
+  observer.observe(document.body,{childList:true,subtree:true});
+  mobileQuery.addEventListener?.('change',positionBugButton);
+  window.addEventListener('resize',positionBugButton);
+  positionBugButton();
 })();
 </script>
 <style id="sphera-mobile-orders-card-layout">
