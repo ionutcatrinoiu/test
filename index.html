@@ -9728,6 +9728,14 @@ html>.sphera-edit-popup.modal.open>.wizard{
 
   async function allocateGlobalSequence(){
     if(!window.SPHERA_DB||!window.SPHERA_AUTH?.currentUser)throw new Error('Conexiunea la baza comună nu este disponibilă.');
+    const username=String(currentUser?.username||'').trim().toLowerCase();
+    const account=(USERS||[]).find(user=>username&&String(user?.username||'').trim().toLowerCase()===username)||currentUser||{};
+    const role=String(account.role||currentUser?.role||'').trim().toLowerCase();
+    const partner=role==='partner'||role==='partener'||!!account.clientCode||!!account.clientId;
+    if(partner){
+      const next=(orders||[]).length+1;
+      return String(next).padStart(5,'0').slice(-5);
+    }
     const ref=window.SPHERA_DB.collection(COUNTER_REF_PATH[0]).doc(COUNTER_REF_PATH[1]);
     return window.SPHERA_DB.runTransaction(async transaction=>{
       const snapshot=await transaction.get(ref);
@@ -9745,6 +9753,12 @@ html>.sphera-edit-popup.modal.open>.wizard{
   }
 
   function allocateFallbackSequence(){
+    const username=String(currentUser?.username||'').trim().toLowerCase();
+    const account=(USERS||[]).find(user=>username&&String(user?.username||'').trim().toLowerCase()===username)||currentUser||{};
+    const role=String(account.role||currentUser?.role||'').trim().toLowerCase();
+    if(role==='partner'||role==='partener'||account.clientCode||account.clientId){
+      return String((orders||[]).length+1).padStart(5,'0').slice(-5);
+    }
     let stored=133;
     try{stored=Number(localStorage.getItem('sphera_fallback_global_sequence_v6')||133)}catch(_){}
     const next=Math.max(Number.isSafeInteger(stored)?stored:133,133)+1;
@@ -11896,7 +11910,18 @@ body.sphera-partner #orderRows .status-toggle{pointer-events:none!important;curs
   const responsiblePartnerCenter=()=>{
     const client=associatedClient();
     const account=partnerAccount()||{};
-    return client?.center||client?.createdByCenter||account.center||'';
+    const explicit=[client?.responsibleCenter,client?.zoneCenter,client?.createdByCenter,client?.center,account.responsibleCenter,account.partnerCenter,account.center]
+      .map(value=>String(value||'').trim()).find(value=>value&&norm(value)!=='extern');
+    if(explicit)return explicit;
+    const place=norm([client?.city,client?.county].filter(Boolean).join(' '));
+    const zones=[
+      ['Ploiesti',['ploiesti','prahova']],['Bucuresti',['bucuresti','ilfov']],['Iasi',['iasi']],
+      ['Cluj Napoca',['cluj']],['Brasov',['brasov','galati']],['Botosani',['botosani','suceava']],
+      ['Piatra-Neamt',['piatra neamt','neamt']],['Constanta',['constanta']],['Bacau',['bacau']],
+      ['Craiova',['craiova','dolj']],['Targu Mures',['targu mures','mures']],['Ramnicu Valcea',['ramnicu valcea','valcea']]
+    ];
+    const inferred=zones.find(([,aliases])=>aliases.some(alias=>place.includes(norm(alias))))?.[0]||'';
+    return orderedProcessingCenters().find(center=>norm(center)===norm(inferred))||inferred;
   };
   function creatorMatchesPartner(order){
     if(!order||!currentUser)return false;
@@ -11970,13 +11995,19 @@ body.sphera-partner #orderRows .status-toggle{pointer-events:none!important;curs
       document.getElementById('newClientBtn')?.classList.add('hide');
       const badge=document.getElementById('accountBadge');
       if(badge){badge.textContent='Partener';badge.classList.remove('hide')}
+      const client=associatedClient();
+      const who=document.getElementById('who');
+      if(who&&client){
+        who.className='muted dashboard-identity';
+        who.innerHTML=`<div class="welcome-line">Bun venit, <strong>${esc(client.name||'')}</strong></div>`;
+      }
     }
     return result;
   };
 
   const priorShowPage=window.showPage||showPage;
   window.showPage=function(id){
-    if(partnerNow()&&['clientsPage','processingPage','nomenclators','settings'].includes(id))id='dashboard';
+    if(partnerNow()&&['clientsPage','nomenclators','settings'].includes(id))id='dashboard';
     return priorShowPage.call(this,id,arguments[1]);
   };
 
@@ -12018,6 +12049,11 @@ body.sphera-partner #orderRows .status-toggle{pointer-events:none!important;curs
         input.placeholder=draft.mount;
       }
       document.getElementById('mountOptions')?.remove();
+    }
+    if(partnerNow()){
+      const visibleStep=step===6?6:step===7?7:step+1;
+      if(typeof stepNo!=='undefined'&&stepNo)stepNo.textContent='Pas '+visibleStep+' din 7';
+      if(typeof bar!=='undefined'&&bar)bar.style.width=(visibleStep/7*100)+'%';
     }
     return result;
   };
