@@ -1615,9 +1615,20 @@ function isAdmin(){return currentUser?.role==='admin';}
 function visibleOrders(){return (isAdmin()||currentUser?.role==='iasi')?orders:orders.filter(o=>norm(o.center)===norm(currentUser?.center));}
 function processingCenterLabel(o){
  const creatorRole=String(o?.createdByRole||'').trim().toLowerCase();
- const partnerOrder=creatorRole==='partner'||creatorRole==='partener'||!!o?.partnerClientCode||!!o?.partnerClientId;
+ const orderOperatorCode=String(o?.operatorCode||o?.createdByOperatorCode||'').replace(/\D/g,'').padStart(2,'0').slice(-2);
+ const creatorUsername=String(o?.createdByUsername||'').trim().toLowerCase();
+ const creatorName=norm(o?.createdByName||o?.operator||'');
+ const creatorAccount=(USERS||[]).find(user=>{
+   const userCode=String(user?.operatorCode||'').replace(/\D/g,'').padStart(2,'0').slice(-2);
+   return (orderOperatorCode!=='00'&&userCode===orderOperatorCode)||
+     (creatorUsername&&String(user?.username||'').trim().toLowerCase()===creatorUsername)||
+     (creatorName&&norm(user?.name||'')===creatorName);
+ });
+ const accountRole=String(creatorAccount?.role||'').trim().toLowerCase();
+ const partnerOrder=creatorRole==='partner'||creatorRole==='partener'||accountRole==='partner'||accountRole==='partener'||
+   !!o?.partnerClientCode||!!o?.partnerClientId||!!creatorAccount?.clientCode||!!creatorAccount?.clientId;
  if(partnerOrder){
-   const partnerCode=String(o?.operatorCode||o?.createdByOperatorCode||'').replace(/\D/g,'').padStart(2,'0').slice(-2);
+   const partnerCode=orderOperatorCode;
    return [partnerCode,'Extern'].filter(Boolean).join(' · ');
  }
  const center=String(o?.center||'').trim();
@@ -9715,13 +9726,21 @@ html>.sphera-edit-popup.modal.open>.wizard{
     return String(account.operatorCode||account.code||'00').replace(/\D/g,'').padStart(2,'0').slice(-2);
   }
 
+  function highestExistingSequence(){
+    return (orders||[]).reduce((highest,order)=>{
+      const direct=Number(String(order?.seq||'').replace(/\D/g,''));
+      const digits=String(order?.code||'').replace(/\D/g,'');
+      const fromCode=digits.length>=11?Number(digits.slice(6,11)):0;
+      return Math.max(highest,Number.isSafeInteger(direct)?direct:0,Number.isSafeInteger(fromCode)?fromCode:0);
+    },129);
+  }
+
   async function allocateGlobalSequence(){
     if(!window.SPHERA_DB||!window.SPHERA_AUTH?.currentUser)throw new Error('Conexiunea la baza comună nu este disponibilă.');
     const ref=window.SPHERA_DB.collection(COUNTER_REF_PATH[0]).doc(COUNTER_REF_PATH[1]);
     return window.SPHERA_DB.runTransaction(async transaction=>{
-      const snapshot=await transaction.get(ref);
-      const current=snapshot.exists?Number(snapshot.data()?.value||129):129;
-      const next=Math.max(current,129)+1;
+      await transaction.get(ref);
+      const next=highestExistingSequence()+1;
       if(!Number.isSafeInteger(next)||next<1)throw new Error('Contorul global nu mai poate fi incrementat.');
       transaction.set(ref,{value:next,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
       return String(next).padStart(5,'0');
@@ -9734,9 +9753,7 @@ html>.sphera-edit-popup.modal.open>.wizard{
   }
 
   function allocateFallbackSequence(){
-    let stored=129;
-    try{stored=Number(localStorage.getItem('sphera_fallback_global_sequence_v4')||129)}catch(_){}
-    const next=Math.max(Number.isSafeInteger(stored)?stored:129,129)+1;
+    const next=highestExistingSequence()+1;
     try{localStorage.setItem('sphera_fallback_global_sequence_v4',String(next))}catch(_){}
     return String(next).padStart(5,'0').slice(-5)
   }
