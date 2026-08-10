@@ -5,15 +5,6 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1, maximum-scale=1" name="viewport"/>
 <title>AVVERO | SPHERA - Smart Lenses Ordering</title>
-<!-- SPHERA PWA / iPhone Home Screen -->
-<meta name="theme-color" content="#F4F7FB">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="SPHERA">
-<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
-<link rel="manifest" href="manifest.webmanifest">
-
 <link href="https://fonts.googleapis.com" rel="preconnect"/>
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
@@ -9694,7 +9685,7 @@ html>.sphera-edit-popup.modal.open>.wizard{
 <script id="sphera-v116-global-order-sequence">
 (function(){
   'use strict';
-  const COUNTER_REF_PATH=['appData','globalOrderSequenceV3'];
+  const COUNTER_REF_PATH=['appData','globalOrderSequenceV4'];
   let orderCreationPending=false;
   let preparedSequenceTask=null;
 
@@ -9716,8 +9707,8 @@ html>.sphera-edit-popup.modal.open>.wizard{
     const ref=window.SPHERA_DB.collection(COUNTER_REF_PATH[0]).doc(COUNTER_REF_PATH[1]);
     return window.SPHERA_DB.runTransaction(async transaction=>{
       const snapshot=await transaction.get(ref);
-      const current=snapshot.exists?Number(snapshot.data()?.value||0):0;
-      const next=current+1;
+      const current=snapshot.exists?Number(snapshot.data()?.value||129):129;
+      const next=Math.max(current,129)+1;
       if(!Number.isSafeInteger(next)||next<1)throw new Error('Contorul global nu mai poate fi incrementat.');
       transaction.set(ref,{value:next,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
       return String(next).padStart(5,'0');
@@ -9730,16 +9721,10 @@ html>.sphera-edit-popup.modal.open>.wizard{
   }
 
   function allocateFallbackSequence(){
-    let deleted=[];
-    try{deleted=JSON.parse(localStorage.getItem('sphera_deleted_orders_history')||'[]')}catch(_){}
-    const maximum=[...(orders||[]),...(Array.isArray(deleted)?deleted:[])].reduce((value,order)=>{
-      const sequence=Number(String(order?.seq||'').replace(/\D/g,''));
-      return Number.isSafeInteger(sequence)?Math.max(value,sequence):value
-    },0);
-    let stored=0;
-    try{stored=Number(localStorage.getItem('sphera_fallback_global_sequence')||0)}catch(_){}
-    const next=Math.max(maximum,Number.isSafeInteger(stored)?stored:0)+1;
-    try{localStorage.setItem('sphera_fallback_global_sequence',String(next))}catch(_){}
+    let stored=129;
+    try{stored=Number(localStorage.getItem('sphera_fallback_global_sequence_v4')||129)}catch(_){}
+    const next=Math.max(Number.isSafeInteger(stored)?stored:129,129)+1;
+    try{localStorage.setItem('sphera_fallback_global_sequence_v4',String(next))}catch(_){}
     return String(next).padStart(5,'0').slice(-5)
   }
 
@@ -11640,6 +11625,153 @@ html>.sphera-edit-popup.modal.open>.wizard{
   enhanceMobileWizard();
 })();
 </script>
+
+<script id="sphera-v130-partner-role-craiova">
+(function(){
+  'use strict';
+  const PARTNER_ROLE='partner';
+  const isPartner=()=>!!currentUser&&String(currentUser.role||'').toLowerCase()===PARTNER_ROLE;
+  const partnerClient=()=>CLIENTS.find(c=>String(c.code)===String(currentUser?.clientCode||''));
+
+  const oldRoleLabel=window.roleLabel||roleLabel;
+  window.roleLabel=function(role){return role===PARTNER_ROLE?'Partener':oldRoleLabel(role)};
+  window.canCreateOrders=function(){return !!currentUser&&['admin','operator','iasi','partner'].includes(currentUser.role)};
+  const oldCanManageClients=window.canManageClients||canManageClients;
+  window.canManageClients=function(){return isPartner()?false:oldCanManageClients()};
+
+  const oldVisibleOrders=window.visibleOrders||visibleOrders;
+  window.visibleOrders=function(){
+    if(isPartner())return (orders||[]).filter(o=>String(o.client?.code||'')===String(currentUser?.clientCode||''));
+    return oldVisibleOrders();
+  };
+  if(typeof window.processingVisibleOrders==='function'){
+    const oldProcessingVisibleOrders=window.processingVisibleOrders;
+    window.processingVisibleOrders=function(){return isPartner()?window.visibleOrders():oldProcessingVisibleOrders()};
+  }
+
+  function ensurePartnerUserFields(){
+    const role=document.getElementById('newUserRole');
+    if(role&&!role.querySelector('option[value="partner"]'))role.insertAdjacentHTML('beforeend','<option value="partner">Partener</option>');
+    const centerField=document.getElementById('newUserCenterField');
+    if(centerField&&!document.getElementById('newUserPartnerClientField')){
+      centerField.insertAdjacentHTML('afterend','<div class="field hide" id="newUserPartnerClientField"><label>Client asociat</label><select id="newUserPartnerClient"></select></div>');
+    }
+    const clientSelect=document.getElementById('newUserPartnerClient');
+    if(clientSelect){
+      const selected=clientSelect.value;
+      clientSelect.innerHTML='<option value="">Selectează clientul</option>'+[...(CLIENTS||[])].sort((a,b)=>norm(a.name).localeCompare(norm(b.name),'ro')).map(c=>`<option value="${esc(c.code)}">${esc(c.name)} · ${esc(c.city||'')} · ${esc(c.code)}</option>`).join('');
+      if(selected)clientSelect.value=selected;
+    }
+  }
+
+  const oldSyncUserCenterField=window.syncUserCenterField||syncUserCenterField;
+  window.syncUserCenterField=function(){
+    ensurePartnerUserFields();
+    const result=oldSyncUserCenterField&&oldSyncUserCenterField.apply(this,arguments);
+    const partner=document.getElementById('newUserRole')?.value===PARTNER_ROLE;
+    document.getElementById('newUserPartnerClientField')?.classList.toggle('hide',!partner);
+    return result;
+  };
+  const oldOpenUserDialog=window.openUserDialog||openUserDialog;
+  window.openUserDialog=function(){const r=oldOpenUserDialog&&oldOpenUserDialog.apply(this,arguments);ensurePartnerUserFields();syncUserCenterField();return r};
+
+  const oldAddUserAccount=window.addUserAccount||addUserAccount;
+  window.addUserAccount=function(){
+    ensurePartnerUserFields();
+    const role=document.getElementById('newUserRole')?.value;
+    if(role!==PARTNER_ROLE)return oldAddUserAccount.apply(this,arguments);
+    const clientCode=document.getElementById('newUserPartnerClient')?.value||'';
+    const center=document.getElementById('newUserCenter')?.value||'';
+    if(!clientCode||!center){showAppConfirm({title:'Date incomplete',text:'Selectează clientul asociat și centrul responsabil.',confirmText:'OK'});return}
+    const before=new Set((USERS||[]).map(u=>u.username));
+    const result=oldAddUserAccount.apply(this,arguments);
+    const created=(USERS||[]).find(u=>!before.has(u.username)&&u.role===PARTNER_ROLE);
+    if(created){created.clientCode=clientCode;created.center=center;saveUsers();renderUsersAdmin()}
+    return result;
+  };
+
+  const oldUpdateUserAccount=window.updateUserAccount||updateUserAccount;
+  window.updateUserAccount=function(index,field,value){
+    if(field==='clientCode'){
+      if(!guardAdmin()||!USERS[index])return;
+      USERS[index].clientCode=String(value||'');saveUsers();renderUsersAdmin();return;
+    }
+    return oldUpdateUserAccount.apply(this,arguments);
+  };
+
+  const oldRenderUsersAdmin=window.renderUsersAdmin||renderUsersAdmin;
+  window.renderUsersAdmin=function(){
+    oldRenderUsersAdmin&&oldRenderUsersAdmin.apply(this,arguments);
+    if(!isAdmin())return;
+    ensurePartnerUserFields();
+    const box=document.getElementById('usersAdminList');if(!box)return;
+    [...box.querySelectorAll('.user-row')].forEach(row=>{
+      const selects=[...row.querySelectorAll('select')];
+      const roleSelect=selects.find(s=>[...s.options].some(o=>o.value==='admin'));
+      if(roleSelect&&!roleSelect.querySelector('option[value="partner"]'))roleSelect.insertAdjacentHTML('beforeend','<option value="partner">Partener</option>');
+      if(roleSelect?.value==='partner'){
+        const name=row.querySelector('b')?.textContent||'';
+        const idx=(USERS||[]).findIndex(u=>norm(u.name)===norm(name)&&u.role==='partner');
+        const user=USERS[idx];
+        if(idx>=0&&!row.querySelector('.partner-client-assignment')){
+          const centerSelect=selects[selects.length-1];
+          const clientSelect=document.createElement('select');clientSelect.className='partner-client-assignment';
+          clientSelect.innerHTML='<option value="">Client asociat</option>'+[...(CLIENTS||[])].sort((a,b)=>norm(a.name).localeCompare(norm(b.name),'ro')).map(c=>`<option value="${esc(c.code)}" ${String(c.code)===String(user?.clientCode||'')?'selected':''}>${esc(c.name)} · ${esc(c.code)}</option>`).join('');
+          clientSelect.onchange=function(){updateUserAccount(idx,'clientCode',this.value)};
+          centerSelect?.insertAdjacentElement('afterend',clientSelect);
+        }
+      }
+    });
+  };
+
+  const oldApplyPermissions=window.applyPermissions||applyPermissions;
+  window.applyPermissions=function(){
+    const r=oldApplyPermissions&&oldApplyPermissions.apply(this,arguments);
+    const partner=isPartner();
+    ['menuClients','menuNomenclators','menuStatus','menuSettings'].forEach(id=>{const el=document.getElementById(id);if(el&&partner)el.style.setProperty('display','none','important')});
+    const clientBtn=document.getElementById('newClientBtn');if(clientBtn&&partner)clientBtn.classList.add('hide');
+    const badge=document.getElementById('accountBadge');if(badge&&partner){badge.textContent='Partener';badge.classList.remove('hide')}
+    return r;
+  };
+
+  const oldOpenWizard=window.openWizard||openWizard;
+  window.openWizard=function(){
+    if(!isPartner())return oldOpenWizard.apply(this,arguments);
+    const client=partnerClient();
+    if(!client){showAppConfirm({title:'Client neasociat',text:'Contul Partener nu are un client SPHERA asociat.',confirmText:'OK'});return}
+    const r=oldOpenWizard.apply(this,arguments);
+    draft.client=client;draft.clientQuery=client.name;draft.center=currentUser.center||draft.center;draft.operator=currentUser.name||currentUser.username||'Partener';
+    drawStep(false);return r;
+  };
+
+  const oldDrawStep=window.drawStep||drawStep;
+  window.drawStep=function(){
+    if(isPartner()){
+      const client=partnerClient();if(client){draft.client=client;draft.clientQuery=client.name;draft.center=currentUser.center||draft.center;draft.operator=currentUser.name||currentUser.username||'Partener'}
+    }
+    const r=oldDrawStep.apply(this,arguments);
+    if(isPartner()&&typeof step!=='undefined'&&step===0&&window.stepBox){
+      const c=partnerClient();
+      stepBox.innerHTML=`<div class="field"><label>Client</label><div class="card" style="padding:14px!important"><b>${esc(c?.name||'')}</b><div class="muted">${esc(c?.city||'')} · Cod ${esc(c?.code||'')}</div></div></div>`;
+    }
+    if(typeof step!=='undefined'&&step===5&&currentUser&&norm(currentUser.center)==='iasi'){
+      const select=document.getElementById('deliveryDestinationSelect');
+      if(select&&![...select.options].some(o=>norm(o.textContent)==='craiova')){
+        const clientOption=[...select.options].find(o=>o.value==='client');
+        const option=new Option('Craiova','center:Craiova');
+        select.insertBefore(option,clientOption||null);
+      }
+    }
+    return r;
+  };
+
+  const oldCanSetWorkflowStep=window.canSetWorkflowStep;
+  if(typeof oldCanSetWorkflowStep==='function')window.canSetWorkflowStep=function(status,order){if(isPartner())return false;return oldCanSetWorkflowStep.apply(this,arguments)};
+
+  ensurePartnerUserFields();
+})();
+</script>
+
 <style id="sphera-order-creation-loader-style">
 #modal .wizard{position:relative}
 .order-creation-loader{
@@ -11704,16 +11836,6 @@ html>.sphera-edit-popup.modal.open>.wizard{
     }
   };
 })();
-</script>
-
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function () {
-    navigator.serviceWorker.register('./sw.js').catch(function (err) {
-      console.warn('SPHERA service worker:', err);
-    });
-  });
-}
 </script>
 </body>
 </html>
