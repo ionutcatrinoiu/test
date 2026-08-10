@@ -9713,7 +9713,7 @@ html>.sphera-edit-popup.modal.open>.wizard{
 <script id="sphera-v116-global-order-sequence">
 (function(){
   'use strict';
-  const COUNTER_REF_PATH=['appData','globalOrderSequenceFrom142V1'];
+  const COUNTER_REF_PATH=['appData','globalOrderSequenceFrom142V2'];
   let orderCreationPending=false;
   let preparedSequenceTask=null;
 
@@ -9749,7 +9749,7 @@ html>.sphera-edit-popup.modal.open>.wizard{
   }
 
   function allocateFallbackSequence(){
-    const key='sphera_global_sequence_from_142_v1';
+    const key='sphera_global_sequence_from_142_v2';
     let stored=141;
     try{stored=Number(localStorage.getItem(key)||141)}catch(_){}
     const current=Number.isSafeInteger(stored)&&stored>=141?stored:141;
