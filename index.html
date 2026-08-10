@@ -11837,5 +11837,197 @@ html>.sphera-edit-popup.modal.open>.wizard{
   };
 })();
 </script>
+
+<style id="sphera-v131-partner-permissions-final">
+body.sphera-partner #dashboardClientsCard,
+body.sphera-partner #recentClientsBox,
+body.sphera-partner #deletedOrdersCard,
+body.sphera-partner #newClientBtn,
+body.sphera-partner #menuClients,
+body.sphera-partner #menuStatus,
+body.sphera-partner #menuNomenclators,
+body.sphera-partner #menuSettings{display:none!important}
+body.sphera-partner #orderRows .status-toggle{pointer-events:none!important;cursor:default!important}
+</style>
+<script id="sphera-v131-partner-permissions-final">
+(function(){
+  'use strict';
+  const PARTNER_ROLE='partner';
+  const partnerNow=()=>String(currentUser?.role||'').trim().toLowerCase()===PARTNER_ROLE;
+  const partnerAccount=()=>{
+    const username=String(currentUser?.username||'').trim().toLowerCase();
+    return (USERS||[]).find(user=>String(user.username||'').trim().toLowerCase()===username)||currentUser||null;
+  };
+  const associatedClient=()=>{
+    const account=partnerAccount();
+    return (CLIENTS||[]).find(client=>
+      (account?.clientId&&String(client.id||client.code)===String(account.clientId))||
+      String(client.code||'')===String(account?.clientCode||'')
+    );
+  };
+  function creatorMatchesPartner(order){
+    if(!order||!currentUser)return false;
+    const account=partnerAccount()||{};
+    const userIds=[currentUser.id,currentUser.uid,account.id,account.uid].filter(Boolean).map(String);
+    const orderIds=[order.createdById,order.createdByUid,order.creatorUid,order.userId].filter(Boolean).map(String);
+    if(userIds.length&&orderIds.some(id=>userIds.includes(id)))return true;
+    const usernames=[currentUser.username,account.username].filter(Boolean).map(value=>String(value).trim().toLowerCase());
+    const orderUsernames=[order.createdByUsername,order.creatorUsername].filter(Boolean).map(value=>String(value).trim().toLowerCase());
+    if(usernames.length&&orderUsernames.some(value=>usernames.includes(value)))return true;
+    return String(order.createdByRole||'').toLowerCase()===PARTNER_ROLE&&
+      norm(order.createdByName||order.operator||'')===norm(currentUser.name||account.name||'');
+  }
+  function launched(order){
+    try{return orderWorkflowIndex(order)===0}catch(_){
+      try{return workflowIndex(order)===0}catch(__){return norm(order?.workflowStatus||order?.status)==='lansata'}
+    }
+  }
+  function bindPartnerDraft(){
+    if(!partnerNow())return false;
+    const client=associatedClient();
+    if(!client)return false;
+    const account=partnerAccount()||currentUser;
+    draft.client=client;
+    draft.clientQuery=client.name;
+    draft.center=account.center||client.center||client.createdByCenter||draft.center||'';
+    draft.operator=account.name||account.username||'Partener';
+    return true;
+  }
+  function stampPartnerOrder(order){
+    if(!partnerNow()||!order)return;
+    const account=partnerAccount()||currentUser;
+    const client=associatedClient();
+    const now=new Date();
+    order.client=client||order.client;
+    order.center=account.center||order.center;
+    order.operator=account.name||account.username||'Partener';
+    order.createdById=account.id||account.uid||account.username||'';
+    order.createdByUid=account.uid||'';
+    order.createdByUsername=account.username||'';
+    order.createdByName=account.name||account.username||'Partener';
+    order.createdByRole=PARTNER_ROLE;
+    order.createdByCenter=account.center||order.center||'';
+    order.createdTimestamp=order.createdTimestamp||now.getTime();
+    order.createdDate=order.createdDate||now.toLocaleDateString('ro-RO');
+    order.createdTime=order.createdTime||now.toLocaleTimeString('ro-RO',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    order.partnerClientId=client?.id||client?.code||account.clientId||'';
+    order.partnerClientCode=client?.code||account.clientCode||'';
+  }
+
+  const priorVisibleOrders=window.visibleOrders||visibleOrders;
+  window.visibleOrders=function(){
+    if(partnerNow())return (orders||[]).filter(creatorMatchesPartner);
+    return priorVisibleOrders.apply(this,arguments);
+  };
+  const priorProcessingVisibleOrders=window.processingVisibleOrders;
+  if(typeof priorProcessingVisibleOrders==='function')window.processingVisibleOrders=function(){
+    return partnerNow()?window.visibleOrders():priorProcessingVisibleOrders.apply(this,arguments);
+  };
+
+  const priorApplyPermissions=window.applyPermissions||applyPermissions;
+  window.applyPermissions=function(){
+    const result=priorApplyPermissions&&priorApplyPermissions.apply(this,arguments);
+    document.body.classList.toggle('sphera-partner',partnerNow());
+    if(partnerNow()){
+      ['menuClients','menuStatus','menuNomenclators','menuSettings'].forEach(id=>document.getElementById(id)?.style.setProperty('display','none','important'));
+      document.getElementById('newClientBtn')?.classList.add('hide');
+      const badge=document.getElementById('accountBadge');
+      if(badge){badge.textContent='Partener';badge.classList.remove('hide')}
+    }
+    return result;
+  };
+
+  const priorShowPage=window.showPage||showPage;
+  window.showPage=function(id){
+    if(partnerNow()&&['clientsPage','processingPage','nomenclators','settings'].includes(id))id='dashboard';
+    return priorShowPage.call(this,id,arguments[1]);
+  };
+
+  const priorOpenWizard=window.openWizard||openWizard;
+  window.openWizard=function(){
+    if(!partnerNow())return priorOpenWizard.apply(this,arguments);
+    if(!associatedClient()){
+      showAppConfirm({title:'Client neasociat',text:'Contul Partener nu are un client SPHERA asociat.',confirmText:'OK'});
+      return;
+    }
+    const result=priorOpenWizard.apply(this,arguments);
+    bindPartnerDraft();
+    step=1;
+    drawStep(false);
+    return result;
+  };
+  const priorDrawStep=window.drawStep||drawStep;
+  window.drawStep=function(){
+    if(partnerNow()){
+      if(step===0)step=1;
+      bindPartnerDraft();
+    }
+    return priorDrawStep.apply(this,arguments);
+  };
+  const priorPrevStep=window.prevStep||prevStep;
+  window.prevStep=function(){
+    if(partnerNow()&&step===1){closeWizard();return}
+    return priorPrevStep.apply(this,arguments);
+  };
+
+  const priorCanEditOrder=window.canEditOrder;
+  window.canEditOrder=function(order){
+    if(partnerNow())return creatorMatchesPartner(order)&&launched(order);
+    return priorCanEditOrder?priorCanEditOrder.apply(this,arguments):false;
+  };
+  const priorCanDeleteOrder=window.canDeleteOrder;
+  window.canDeleteOrder=function(order){
+    if(partnerNow())return creatorMatchesPartner(order)&&launched(order);
+    return priorCanDeleteOrder?priorCanDeleteOrder.apply(this,arguments):false;
+  };
+  const priorDeleteOrder=window.deleteOrder;
+  window.deleteOrder=function(id){
+    const order=(orders||[]).find(item=>String(item.id)===String(id));
+    if(partnerNow()&&!window.canDeleteOrder(order))return false;
+    return priorDeleteOrder?priorDeleteOrder.apply(this,arguments):false;
+  };
+  const priorCanSetWorkflowStep=window.canSetWorkflowStep;
+  window.canSetWorkflowStep=function(){
+    if(partnerNow())return false;
+    return priorCanSetWorkflowStep?priorCanSetWorkflowStep.apply(this,arguments):false;
+  };
+  const priorToggleOrderStatus=window.toggleOrderStatus;
+  window.toggleOrderStatus=function(){
+    if(partnerNow())return false;
+    return priorToggleOrderStatus?priorToggleOrderStatus.apply(this,arguments):false;
+  };
+
+  const priorRepeatOrder=window.repeatOrder;
+  window.repeatOrder=function(id){
+    const source=(orders||[]).find(item=>String(item.id)===String(id));
+    if(partnerNow()&&!creatorMatchesPartner(source))return false;
+    return priorRepeatOrder?priorRepeatOrder.apply(this,arguments):false;
+  };
+
+  const priorCreateOrder=window.createOrder;
+  window.createOrder=async function(){
+    if(partnerNow()&&!bindPartnerDraft())return;
+    const before=new Set((orders||[]).map(item=>String(item.id)));
+    const result=await priorCreateOrder.apply(this,arguments);
+    if(partnerNow()){
+      const created=(orders||[]).find(item=>!before.has(String(item.id)));
+      if(created){stampPartnerOrder(created);save();render()}
+    }
+    return result;
+  };
+
+  const priorUpdateUserAccount=window.updateUserAccount||updateUserAccount;
+  window.updateUserAccount=function(index,field,value){
+    const result=priorUpdateUserAccount.apply(this,arguments);
+    if(field==='clientCode'&&USERS[index]){
+      const client=(CLIENTS||[]).find(item=>String(item.code)===String(value||''));
+      USERS[index].clientId=client?.id||client?.code||'';
+      USERS[index].clientName=client?.name||'';
+      saveUsers();
+    }
+    return result;
+  };
+})();
+</script>
 </body>
 </html>
