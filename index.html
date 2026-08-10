@@ -1614,6 +1614,12 @@ function canManageClients(){return currentUser && (currentUser.role==='admin'||c
 function isAdmin(){return currentUser?.role==='admin';}
 function visibleOrders(){return (isAdmin()||currentUser?.role==='iasi')?orders:orders.filter(o=>norm(o.center)===norm(currentUser?.center));}
 function processingCenterLabel(o){
+ const creatorRole=String(o?.createdByRole||'').trim().toLowerCase();
+ const partnerOrder=creatorRole==='partner'||creatorRole==='partener'||!!o?.partnerClientCode||!!o?.partnerClientId;
+ if(partnerOrder){
+   const partnerCode=String(o?.operatorCode||o?.createdByOperatorCode||'').replace(/\D/g,'').padStart(2,'0').slice(-2);
+   return [partnerCode,'Extern'].filter(Boolean).join(' · ');
+ }
  const center=String(o?.center||'').trim();
  const match=CENTERS.find(x=>norm(x.center)===norm(center));
  const code=String(match?.centerCode||o?.centerCode||'').trim();
@@ -11917,6 +11923,7 @@ body.sphera-partner #orderRows .status-toggle{pointer-events:none!important;curs
     order.createdByName=account.name||account.username||'Partener';
     order.createdByRole=PARTNER_ROLE;
     order.createdByCenter=account.center||order.center||'';
+    order.createdByOperatorCode=String(account.operatorCode||order.operatorCode||'00').replace(/\D/g,'').padStart(2,'0').slice(-2);
     order.createdTimestamp=order.createdTimestamp||now.getTime();
     order.createdDate=order.createdDate||now.toLocaleDateString('ro-RO');
     order.createdTime=order.createdTime||now.toLocaleTimeString('ro-RO',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
