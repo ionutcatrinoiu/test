@@ -12106,13 +12106,51 @@ body.sphera-partner #orderRows .status-toggle{pointer-events:none!important;curs
     return priorRepeatOrder?priorRepeatOrder.apply(this,arguments):false;
   };
 
+  async function allocateGlobalSequenceFrom136(){
+    const storageKey='sphera_global_sequence_from_136_v1';
+    if(window.SPHERA_DB&&window.SPHERA_AUTH?.currentUser){
+      const ref=window.SPHERA_DB.collection('appData').doc('globalOrderSequenceFrom136V1');
+      try{
+        return await window.SPHERA_DB.runTransaction(async transaction=>{
+          const snapshot=await transaction.get(ref);
+          const stored=snapshot.exists?Number(snapshot.data()?.value||135):135;
+          const current=Number.isSafeInteger(stored)&&stored>=135?stored:135;
+          const next=current+1;
+          transaction.set(ref,{value:next,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+          return String(next).padStart(5,'0').slice(-5);
+        });
+      }catch(error){
+        console.error('Contorul global resetat nu este disponibil online.',error);
+      }
+    }
+    let stored=135;
+    try{stored=Number(localStorage.getItem(storageKey)||135)}catch(_){}
+    const current=Number.isSafeInteger(stored)&&stored>=135?stored:135;
+    const next=current+1;
+    try{localStorage.setItem(storageKey,String(next))}catch(_){}
+    return String(next).padStart(5,'0').slice(-5);
+  }
+
   const priorCreateOrder=window.createOrder;
   window.createOrder=async function(){
     if(partnerNow()&&!bindPartnerDraft())return;
     const before=new Set((orders||[]).map(item=>String(item.id)));
     const result=await priorCreateOrder.apply(this,arguments);
+    const created=(orders||[]).find(item=>!before.has(String(item.id)));
+    if(created){
+      const sequence=await allocateGlobalSequenceFrom136();
+      const digits=String(created.code||'').replace(/\D/g,'');
+      const operatorCode=String(created.operatorCode||currentUser?.operatorCode||digits.slice(4,6)||'00').replace(/\D/g,'').padStart(2,'0').slice(-2);
+      const clientCode=String(created.client?.code||digits.slice(-3)||'').replace(/\D/g,'').padStart(3,'0').slice(-3);
+      const datePrefix=digits.length>=4?digits.slice(0,4):'';
+      created.seq=sequence;
+      created.operatorCode=operatorCode;
+      created.code=datePrefix+operatorCode+sequence+clientCode;
+      save();render();
+      const generatedInput=document.getElementById('generatedCodeInput');
+      if(generatedInput)generatedInput.value=created.code;
+    }
     if(partnerNow()){
-      const created=(orders||[]).find(item=>!before.has(String(item.id)));
       if(created){stampPartnerOrder(created);save();render()}
     }
     return result;
