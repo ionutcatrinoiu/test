@@ -4685,6 +4685,8 @@ cursor:pointer;
       clientId:profile?.clientId||profile?.partnerClientId||'',
       clientCode:profile?.clientCode||profile?.partnerClientCode||'',
       clientName:profile?.clientName||'',
+      responsibleCenter:profile?.responsibleCenter||profile?.partnerCenter||'',
+      partnerCenter:profile?.partnerCenter||profile?.responsibleCenter||'',
       operatorCode:String(profile?.operatorCode||profile?.code||'00').padStart(2,'0'),
       active:profile?.active!==false
     };
@@ -5141,6 +5143,8 @@ cursor:pointer;
           clientId:x.clientId||x.partnerClientId||localUser?.clientId||'',
           clientCode:x.clientCode||x.partnerClientCode||localUser?.clientCode||'',
           clientName:x.clientName||localUser?.clientName||'',
+          responsibleCenter:x.responsibleCenter||x.partnerCenter||localUser?.responsibleCenter||localUser?.partnerCenter||'',
+          partnerCenter:x.partnerCenter||x.responsibleCenter||localUser?.partnerCenter||localUser?.responsibleCenter||'',
           operatorCode:String(x.operatorCode||x.code||localUser?.operatorCode||'00').padStart(2,'0'),
           active:x.active!==false,
           email:x.email||'',
@@ -11724,12 +11728,28 @@ html>.sphera-edit-popup.modal.open>.wizard{
     const before=new Set((USERS||[]).map(u=>u.username));
     const result=oldAddUserAccount.apply(this,arguments);
     const created=(USERS||[]).find(u=>!before.has(u.username)&&u.role===PARTNER_ROLE);
-    if(created){created.clientCode=clientCode;created.center=center;saveUsers();renderUsersAdmin()}
+    if(created){
+      const client=(CLIENTS||[]).find(item=>String(item.code)===String(clientCode));
+      created.clientCode=clientCode;
+      created.clientId=client?.id||client?.code||'';
+      created.clientName=client?.name||'';
+      created.responsibleCenter=center;
+      created.partnerCenter=center;
+      created.center='Extern';
+      saveUsers();renderUsersAdmin();
+    }
     return result;
   };
 
   const oldUpdateUserAccount=window.updateUserAccount||updateUserAccount;
   window.updateUserAccount=function(index,field,value){
+    if(field==='responsibleCenter'){
+      if(!guardAdmin()||!USERS[index])return;
+      USERS[index].responsibleCenter=String(value||'');
+      USERS[index].partnerCenter=String(value||'');
+      USERS[index].center='Extern';
+      saveUsers();renderUsersAdmin();return;
+    }
     if(field==='clientCode'){
       if(!guardAdmin()||!USERS[index])return;
       USERS[index].clientCode=String(value||'');saveUsers();renderUsersAdmin();return;
@@ -11753,6 +11773,12 @@ html>.sphera-edit-popup.modal.open>.wizard{
         const user=USERS[idx];
         if(idx>=0&&!row.querySelector('.partner-client-assignment')){
           const centerSelect=selects[selects.length-1];
+          const responsible=user?.responsibleCenter||user?.partnerCenter||'';
+          if(centerSelect){
+            centerSelect.innerHTML='<option value="">Centru responsabil</option>'+orderedProcessingCenters().filter(center=>norm(center)!=='extern').map(center=>`<option value="${esc(center)}" ${norm(center)===norm(responsible)?'selected':''}>${esc(center)}</option>`).join('');
+            centerSelect.onchange=function(){updateUserAccount(idx,'responsibleCenter',this.value)};
+            centerSelect.setAttribute('aria-label','Centru responsabil Partener');
+          }
           const clientSelect=document.createElement('select');clientSelect.className='partner-client-assignment';
           clientSelect.innerHTML='<option value="">Client asociat</option>'+[...(CLIENTS||[])].sort((a,b)=>norm(a.name).localeCompare(norm(b.name),'ro')).map(c=>`<option value="${esc(c.code)}" ${String(c.code)===String(user?.clientCode||'')?'selected':''}>${esc(c.name)} · ${esc(c.code)}</option>`).join('');
           clientSelect.onchange=function(){updateUserAccount(idx,'clientCode',this.value)};
@@ -11910,9 +11936,10 @@ body.sphera-partner #orderRows .status-toggle{pointer-events:none!important;curs
   const responsiblePartnerCenter=()=>{
     const client=associatedClient();
     const account=partnerAccount()||{};
-    const explicit=[client?.responsibleCenter,client?.zoneCenter,client?.createdByCenter,client?.center,account.responsibleCenter,account.partnerCenter,account.center]
+    const explicit=[account.responsibleCenter,account.partnerCenter,client?.responsibleCenter,client?.zoneCenter,client?.createdByCenter,client?.center]
       .map(value=>String(value||'').trim()).find(value=>value&&norm(value)!=='extern');
     if(explicit)return explicit;
+    if(norm(client?.name||'')==='royal optic')return orderedProcessingCenters().find(center=>norm(center)==='iasi')||'Iasi';
     const place=norm([client?.city,client?.county].filter(Boolean).join(' '));
     const zones=[
       ['Ploiesti',['ploiesti','prahova']],['Bucuresti',['bucuresti','ilfov']],['Iasi',['iasi']],
@@ -12066,8 +12093,13 @@ body.sphera-partner #orderRows .status-toggle{pointer-events:none!important;curs
 
   const priorCanEditOrder=window.canEditOrder;
   window.canEditOrder=function(order){
-    if(partnerNow())return creatorMatchesPartner(order)&&launched(order);
+    if(partnerNow())return false;
     return priorCanEditOrder?priorCanEditOrder.apply(this,arguments):false;
+  };
+  const priorOpenOrderEdit=window.openOrderEdit;
+  if(typeof priorOpenOrderEdit==='function')window.openOrderEdit=function(){
+    if(partnerNow())return false;
+    return priorOpenOrderEdit.apply(this,arguments);
   };
   const priorCanDeleteOrder=window.canDeleteOrder;
   window.canDeleteOrder=function(order){
@@ -12120,17 +12152,56 @@ body.sphera-partner #orderRows .status-toggle{pointer-events:none!important;curs
       saveUsers();
     }
     const user=USERS[index];
-    if(user&&['role','center','clientCode'].includes(field)&&window.SPHERA_DB&&user.uid){
+    if(user&&['role','center','clientCode','responsibleCenter'].includes(field)&&window.SPHERA_DB&&user.uid){
       window.SPHERA_DB.collection('users').doc(user.uid).set({
         role:user.role,
         center:user.center||'',
         clientId:user.clientId||'',
         clientCode:user.clientCode||'',
-        clientName:user.clientName||''
+        clientName:user.clientName||'',
+        responsibleCenter:user.responsibleCenter||user.partnerCenter||'',
+        partnerCenter:user.partnerCenter||user.responsibleCenter||''
       },{merge:true}).catch(error=>console.error('Actualizarea contului nu a putut fi sincronizată.',error));
     }
     return result;
   };
+
+  function enforcePartnerOpticName(){
+    if(!partnerNow())return;
+    const client=associatedClient();if(!client)return;
+    const who=document.getElementById('who');
+    if(who){
+      who.className='muted dashboard-identity';
+      who.innerHTML=`<div class="welcome-line">Bun venit, <strong>${esc(client.name||'')}</strong></div><div class="role-line">Cont Partener</div>`;
+    }
+    const title=document.getElementById('pageTitle');
+    if(title&&document.getElementById('dashboard')&&!document.getElementById('dashboard').classList.contains('hide')){
+      title.textContent='Dashboard RX · '+String(client.name||'');
+    }
+  }
+  const priorRender=window.render||render;
+  window.render=function(){
+    const result=priorRender&&priorRender.apply(this,arguments);
+    enforcePartnerOpticName();
+    return result;
+  };
+  const priorShowOrderDetails=window.showOrderDetails;
+  window.showOrderDetails=function(id){
+    const result=priorShowOrderDetails&&priorShowOrderDetails.apply(this,arguments);
+    if(!partnerNow())return result;
+    const order=(orders||[]).find(item=>String(item.id)===String(id));
+    const code=String(order?.operatorCode||order?.createdByOperatorCode||partnerAccount()?.operatorCode||'00').replace(/\D/g,'').padStart(2,'0').slice(-2);
+    const modal=[...document.querySelectorAll('.order-details-modal,.modal.open')].pop();
+    if(modal){
+      const labels=[...modal.querySelectorAll('.order-detail-label,.muted')];
+      const operatorLabel=labels.find(label=>norm(label.textContent)==='operator');
+      const value=operatorLabel?.nextElementSibling;
+      if(value)value.textContent=code+' · '+String(order?.operator||order?.createdByName||'');
+      modal.querySelectorAll('[title="Editează comanda"],[aria-label="Editează comanda"]').forEach(button=>button.remove());
+    }
+    return result;
+  };
+  setTimeout(enforcePartnerOpticName,0);
 })();
 </script>
 </body>
