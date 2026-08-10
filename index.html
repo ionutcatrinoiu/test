@@ -9713,7 +9713,7 @@ html>.sphera-edit-popup.modal.open>.wizard{
 <script id="sphera-v116-global-order-sequence">
 (function(){
   'use strict';
-  const COUNTER_REF_PATH=['appData','globalOrderSequenceV6'];
+  const COUNTER_REF_PATH=['appData','globalOrderSequenceFrom142V1'];
   let orderCreationPending=false;
   let preparedSequenceTask=null;
 
@@ -9732,9 +9732,15 @@ html>.sphera-edit-popup.modal.open>.wizard{
 
   async function allocateGlobalSequence(){
     if(!window.SPHERA_DB||!window.SPHERA_AUTH?.currentUser)throw new Error('Conexiunea la baza comună nu este disponibilă.');
-    const next=(orders||[]).length+1;
-    if(!Number.isSafeInteger(next)||next<1)throw new Error('Numărul total al comenzilor nu poate fi folosit pentru alocare.');
-    return String(next).padStart(5,'0').slice(-5);
+    const ref=window.SPHERA_DB.collection(COUNTER_REF_PATH[0]).doc(COUNTER_REF_PATH[1]);
+    return window.SPHERA_DB.runTransaction(async transaction=>{
+      const snapshot=await transaction.get(ref);
+      const stored=snapshot.exists?Number(snapshot.data()?.value||141):141;
+      const current=Number.isSafeInteger(stored)&&stored>=141?stored:141;
+      const next=current+1;
+      transaction.set(ref,{value:next,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+      return String(next).padStart(5,'0').slice(-5);
+    });
   }
 
   function isRemoteQuotaError(error){
@@ -9743,7 +9749,13 @@ html>.sphera-edit-popup.modal.open>.wizard{
   }
 
   function allocateFallbackSequence(){
-    return String((orders||[]).length+1).padStart(5,'0').slice(-5)
+    const key='sphera_global_sequence_from_142_v1';
+    let stored=141;
+    try{stored=Number(localStorage.getItem(key)||141)}catch(_){}
+    const current=Number.isSafeInteger(stored)&&stored>=141?stored:141;
+    const next=current+1;
+    try{localStorage.setItem(key,String(next))}catch(_){}
+    return String(next).padStart(5,'0').slice(-5)
   }
 
   function prepareOrderSequence(){
@@ -12106,31 +12118,6 @@ body.sphera-partner #orderRows .status-toggle{pointer-events:none!important;curs
     return priorRepeatOrder?priorRepeatOrder.apply(this,arguments):false;
   };
 
-  async function allocateGlobalSequenceFrom136(){
-    const storageKey='sphera_global_sequence_from_136_v1';
-    if(window.SPHERA_DB&&window.SPHERA_AUTH?.currentUser){
-      const ref=window.SPHERA_DB.collection('appData').doc('globalOrderSequenceFrom136V1');
-      try{
-        return await window.SPHERA_DB.runTransaction(async transaction=>{
-          const snapshot=await transaction.get(ref);
-          const stored=snapshot.exists?Number(snapshot.data()?.value||135):135;
-          const current=Number.isSafeInteger(stored)&&stored>=135?stored:135;
-          const next=current+1;
-          transaction.set(ref,{value:next,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
-          return String(next).padStart(5,'0').slice(-5);
-        });
-      }catch(error){
-        console.error('Contorul global resetat nu este disponibil online.',error);
-      }
-    }
-    let stored=135;
-    try{stored=Number(localStorage.getItem(storageKey)||135)}catch(_){}
-    const current=Number.isSafeInteger(stored)&&stored>=135?stored:135;
-    const next=current+1;
-    try{localStorage.setItem(storageKey,String(next))}catch(_){}
-    return String(next).padStart(5,'0').slice(-5);
-  }
-
   const priorCreateOrder=window.createOrder;
   window.createOrder=async function(){
     if(partnerNow()&&!bindPartnerDraft())return;
@@ -12138,7 +12125,7 @@ body.sphera-partner #orderRows .status-toggle{pointer-events:none!important;curs
     const result=await priorCreateOrder.apply(this,arguments);
     const created=(orders||[]).find(item=>!before.has(String(item.id)));
     if(created){
-      const sequence=await allocateGlobalSequenceFrom136();
+      const sequence=String(created.seq||'00142').replace(/\D/g,'').padStart(5,'0').slice(-5);
       const digits=String(created.code||'').replace(/\D/g,'');
       const operatorCode=String(created.operatorCode||currentUser?.operatorCode||digits.slice(4,6)||'00').replace(/\D/g,'').padStart(2,'0').slice(-2);
       const clientCode=String(created.client?.code||digits.slice(-3)||'').replace(/\D/g,'').padStart(3,'0').slice(-3);
