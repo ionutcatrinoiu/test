@@ -9709,7 +9709,7 @@ html>.sphera-edit-popup.modal.open>.wizard{
 <script id="sphera-v116-global-order-sequence">
 (function(){
   'use strict';
-  const COUNTER_REF_PATH=['appData','globalOrderSequenceV5'];
+  const COUNTER_REF_PATH=['appData','globalOrderSequenceV6'];
   let orderCreationPending=false;
   let preparedSequenceTask=null;
 
@@ -9746,9 +9746,9 @@ html>.sphera-edit-popup.modal.open>.wizard{
 
   function allocateFallbackSequence(){
     let stored=133;
-    try{stored=Number(localStorage.getItem('sphera_fallback_global_sequence_v5')||133)}catch(_){}
+    try{stored=Number(localStorage.getItem('sphera_fallback_global_sequence_v6')||133)}catch(_){}
     const next=Math.max(Number.isSafeInteger(stored)?stored:133,133)+1;
-    try{localStorage.setItem('sphera_fallback_global_sequence_v5',String(next))}catch(_){}
+    try{localStorage.setItem('sphera_fallback_global_sequence_v6',String(next))}catch(_){}
     return String(next).padStart(5,'0').slice(-5)
   }
 
@@ -11879,7 +11879,8 @@ body.sphera-partner #orderRows .status-toggle{pointer-events:none!important;curs
   const PARTNER_ROLE='partner';
   const partnerNow=()=>{
     const role=String(currentUser?.role||'').trim().toLowerCase();
-    return role===PARTNER_ROLE||role==='partener';
+    const account=partnerAccount?.()||currentUser||{};
+    return role===PARTNER_ROLE||role==='partener'||!!account.clientCode||!!account.clientId;
   };
   const partnerAccount=()=>{
     const username=String(currentUser?.username||'').trim().toLowerCase();
@@ -11891,6 +11892,11 @@ body.sphera-partner #orderRows .status-toggle{pointer-events:none!important;curs
       (account?.clientId&&String(client.id||client.code)===String(account.clientId))||
       String(client.code||'')===String(account?.clientCode||'')
     );
+  };
+  const responsiblePartnerCenter=()=>{
+    const client=associatedClient();
+    const account=partnerAccount()||{};
+    return client?.center||client?.createdByCenter||account.center||'';
   };
   function creatorMatchesPartner(order){
     if(!order||!currentUser)return false;
@@ -11916,8 +11922,11 @@ body.sphera-partner #orderRows .status-toggle{pointer-events:none!important;curs
     const account=partnerAccount()||currentUser;
     draft.client=client;
     draft.clientQuery=client.name;
-    draft.center=account.center||client.center||client.createdByCenter||draft.center||'';
+    draft.center=responsiblePartnerCenter()||draft.center||'';
     draft.operator=account.name||account.username||'Partener';
+    draft.deliveryDestination='client';
+    draft.deliveryCenter='';
+    if(draft.hasMount===true)draft.mount=draft.center;
     return true;
   }
   function stampPartnerOrder(order){
@@ -11989,12 +11998,33 @@ body.sphera-partner #orderRows .status-toggle{pointer-events:none!important;curs
     if(partnerNow()){
       if(step===0)step=1;
       bindPartnerDraft();
+      if(step===5){
+        draft.deliveryDestination='client';
+        draft.deliveryCenter='';
+        step=6;
+      }
     }
-    return priorDrawStep.apply(this,arguments);
+    const result=priorDrawStep.apply(this,arguments);
+    if(partnerNow()&&step===4&&draft.hasMount===true){
+      const center=responsiblePartnerCenter();
+      draft.center=center||draft.center;
+      draft.mount=draft.center;
+      const input=document.getElementById('mountInput');
+      if(input){
+        input.value=draft.mount;
+        input.removeAttribute('list');
+        input.readOnly=true;
+        input.setAttribute('aria-readonly','true');
+        input.placeholder=draft.mount;
+      }
+      document.getElementById('mountOptions')?.remove();
+    }
+    return result;
   };
   const priorPrevStep=window.prevStep||prevStep;
   window.prevStep=function(){
     if(partnerNow()&&step===1){closeWizard();return}
+    if(partnerNow()&&step===6){step=4;drawStep();return}
     return priorPrevStep.apply(this,arguments);
   };
 
