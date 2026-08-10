@@ -4643,6 +4643,7 @@ cursor:pointer;
     if(r==='admin'||r==='administrator')return 'admin';
     if(r==='iasi'||r==='operator-master'||r==='operator master'||r==='master')return 'iasi';
     if(r==='viewer'||r==='operator export'||r==='operator-export'||r==='export')return 'viewer';
+    if(r==='partner'||r==='partener'||r==='operator extern'||r==='operator-extern')return 'partner';
     return 'operator';
   }
   async function findProfile(user,username){
@@ -4664,6 +4665,9 @@ cursor:pointer;
       role:normalizeRole(profile?.role),
       center:profile?.center||profile?.centru||'',
       warehouses:Array.isArray(profile?.warehouses)?profile.warehouses:[],
+      clientId:profile?.clientId||profile?.partnerClientId||'',
+      clientCode:profile?.clientCode||profile?.partnerClientCode||'',
+      clientName:profile?.clientName||'',
       operatorCode:String(profile?.operatorCode||profile?.code||'00').padStart(2,'0'),
       active:profile?.active!==false
     };
@@ -5117,6 +5121,9 @@ cursor:pointer;
           role:normalizeRole(x.role||localUser?.role),
           center:x.center||x.centru||localUser?.center||'',
           warehouses:Array.isArray(x.warehouses)?x.warehouses:(Array.isArray(localUser?.warehouses)?localUser.warehouses:[]),
+          clientId:x.clientId||x.partnerClientId||localUser?.clientId||'',
+          clientCode:x.clientCode||x.partnerClientCode||localUser?.clientCode||'',
+          clientName:x.clientName||localUser?.clientName||'',
           operatorCode:String(x.operatorCode||x.code||localUser?.operatorCode||'00').padStart(2,'0'),
           active:x.active!==false,
           email:x.email||'',
@@ -11853,7 +11860,11 @@ body.sphera-partner #orderRows .status-toggle{pointer-events:none!important;curs
 (function(){
   'use strict';
   const PARTNER_ROLE='partner';
-  const partnerNow=()=>String(currentUser?.role||'').trim().toLowerCase()===PARTNER_ROLE;
+  const partnerNow=()=>{
+    const role=String(currentUser?.role||'').trim().toLowerCase();
+    const center=norm(currentUser?.center||'');
+    return role===PARTNER_ROLE||role==='partener'||role==='operator extern'||role==='operator-extern'||(role==='operator'&&center==='extern');
+  };
   const partnerAccount=()=>{
     const username=String(currentUser?.username||'').trim().toLowerCase();
     return (USERS||[]).find(user=>String(user.username||'').trim().toLowerCase()===username)||currentUser||null;
@@ -12024,6 +12035,16 @@ body.sphera-partner #orderRows .status-toggle{pointer-events:none!important;curs
       USERS[index].clientId=client?.id||client?.code||'';
       USERS[index].clientName=client?.name||'';
       saveUsers();
+    }
+    const user=USERS[index];
+    if(user&&['role','center','clientCode'].includes(field)&&window.SPHERA_DB&&user.uid){
+      window.SPHERA_DB.collection('users').doc(user.uid).set({
+        role:user.role,
+        center:user.center||'',
+        clientId:user.clientId||'',
+        clientCode:user.clientCode||'',
+        clientName:user.clientName||''
+      },{merge:true}).catch(error=>console.error('Actualizarea contului nu a putut fi sincronizată.',error));
     }
     return result;
   };
