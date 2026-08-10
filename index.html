@@ -9732,23 +9732,9 @@ html>.sphera-edit-popup.modal.open>.wizard{
 
   async function allocateGlobalSequence(){
     if(!window.SPHERA_DB||!window.SPHERA_AUTH?.currentUser)throw new Error('Conexiunea la baza comună nu este disponibilă.');
-    const username=String(currentUser?.username||'').trim().toLowerCase();
-    const account=(USERS||[]).find(user=>username&&String(user?.username||'').trim().toLowerCase()===username)||currentUser||{};
-    const role=String(account.role||currentUser?.role||'').trim().toLowerCase();
-    const partner=role==='partner'||role==='partener'||!!account.clientCode||!!account.clientId;
-    if(partner){
-      const next=(orders||[]).length+1;
-      return String(next).padStart(5,'0').slice(-5);
-    }
-    const ref=window.SPHERA_DB.collection(COUNTER_REF_PATH[0]).doc(COUNTER_REF_PATH[1]);
-    return window.SPHERA_DB.runTransaction(async transaction=>{
-      const snapshot=await transaction.get(ref);
-      const current=snapshot.exists?Number(snapshot.data()?.value||133):133;
-      const next=Math.max(Number.isSafeInteger(current)?current:133,133)+1;
-      if(!Number.isSafeInteger(next)||next<1)throw new Error('Contorul global nu mai poate fi incrementat.');
-      transaction.set(ref,{value:next,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
-      return String(next).padStart(5,'0');
-    });
+    const next=(orders||[]).length+1;
+    if(!Number.isSafeInteger(next)||next<1)throw new Error('Numărul total al comenzilor nu poate fi folosit pentru alocare.');
+    return String(next).padStart(5,'0').slice(-5);
   }
 
   function isRemoteQuotaError(error){
@@ -9757,17 +9743,7 @@ html>.sphera-edit-popup.modal.open>.wizard{
   }
 
   function allocateFallbackSequence(){
-    const username=String(currentUser?.username||'').trim().toLowerCase();
-    const account=(USERS||[]).find(user=>username&&String(user?.username||'').trim().toLowerCase()===username)||currentUser||{};
-    const role=String(account.role||currentUser?.role||'').trim().toLowerCase();
-    if(role==='partner'||role==='partener'||account.clientCode||account.clientId){
-      return String((orders||[]).length+1).padStart(5,'0').slice(-5);
-    }
-    let stored=133;
-    try{stored=Number(localStorage.getItem('sphera_fallback_global_sequence_v6')||133)}catch(_){}
-    const next=Math.max(Number.isSafeInteger(stored)?stored:133,133)+1;
-    try{localStorage.setItem('sphera_fallback_global_sequence_v6',String(next))}catch(_){}
-    return String(next).padStart(5,'0').slice(-5)
+    return String((orders||[]).length+1).padStart(5,'0').slice(-5)
   }
 
   function prepareOrderSequence(){
