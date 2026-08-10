@@ -4668,6 +4668,7 @@ cursor:pointer;
       clientId:profile?.clientId||profile?.partnerClientId||'',
       clientCode:profile?.clientCode||profile?.partnerClientCode||'',
       clientName:profile?.clientName||'',
+      responsibleCenter:profile?.responsibleCenter||profile?.centruResponsabil||'',
       operatorCode:String(profile?.operatorCode||profile?.code||'00').padStart(2,'0'),
       active:profile?.active!==false
     };
@@ -5124,6 +5125,7 @@ cursor:pointer;
           clientId:x.clientId||x.partnerClientId||localUser?.clientId||'',
           clientCode:x.clientCode||x.partnerClientCode||localUser?.clientCode||'',
           clientName:x.clientName||localUser?.clientName||'',
+          responsibleCenter:x.responsibleCenter||x.centruResponsabil||localUser?.responsibleCenter||'',
           operatorCode:String(x.operatorCode||x.code||localUser?.operatorCode||'00').padStart(2,'0'),
           active:x.active!==false,
           email:x.email||'',
@@ -11900,7 +11902,8 @@ body.sphera-partner #orderRows .status-toggle{pointer-events:none!important;curs
     const account=partnerAccount()||currentUser;
     draft.client=client;
     draft.clientQuery=client.name;
-    draft.center=account.center||client.center||client.createdByCenter||draft.center||'';
+    const responsibleCenter=account.responsibleCenter||currentUser?.responsibleCenter||client.center||client.createdByCenter||'';
+    draft.center=responsibleCenter||draft.center||'';
     draft.operator=account.name||account.username||'Partener';
     return true;
   }
@@ -11909,15 +11912,18 @@ body.sphera-partner #orderRows .status-toggle{pointer-events:none!important;curs
     const account=partnerAccount()||currentUser;
     const client=associatedClient();
     const now=new Date();
+    const responsibleCenter=account.responsibleCenter||currentUser?.responsibleCenter||client?.center||client?.createdByCenter||order.center||'';
     order.client=client||order.client;
-    order.center=account.center||order.center;
+    order.center=responsibleCenter;
+    order.responsibleCenter=responsibleCenter;
+    order.partnerAccountCenter=account.center||'Extern';
     order.operator=account.name||account.username||'Partener';
     order.createdById=account.id||account.uid||account.username||'';
     order.createdByUid=account.uid||'';
     order.createdByUsername=account.username||'';
     order.createdByName=account.name||account.username||'Partener';
     order.createdByRole=PARTNER_ROLE;
-    order.createdByCenter=account.center||order.center||'';
+    order.createdByCenter=account.center||'Extern';
     order.createdTimestamp=order.createdTimestamp||now.getTime();
     order.createdDate=order.createdDate||now.toLocaleDateString('ro-RO');
     order.createdTime=order.createdTime||now.toLocaleTimeString('ro-RO',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
@@ -12008,6 +12014,18 @@ body.sphera-partner #orderRows .status-toggle{pointer-events:none!important;curs
     return priorToggleOrderStatus?priorToggleOrderStatus.apply(this,arguments):false;
   };
 
+  const partnerStatusBase=window.canSetWorkflowStep;
+  window.canSetWorkflowStep=function(status,order){
+    if(partnerNow())return false;
+    const role=String(currentUser?.role||'').trim().toLowerCase();
+    const isInternalOperator=['operator','operator master','operator-master','master','iasi'].includes(role);
+    const partnerOrder=String(order?.createdByRole||'').trim().toLowerCase()===PARTNER_ROLE;
+    const orderResponsible=norm(order?.responsibleCenter||order?.center||'');
+    const userCenter=norm(currentUser?.center||'');
+    if(partnerOrder&&isInternalOperator&&userCenter&&orderResponsible===userCenter)return true;
+    return partnerStatusBase?partnerStatusBase.apply(this,arguments):false;
+  };
+
   const priorRepeatOrder=window.repeatOrder;
   window.repeatOrder=function(id){
     const source=(orders||[]).find(item=>String(item.id)===String(id));
@@ -12037,10 +12055,11 @@ body.sphera-partner #orderRows .status-toggle{pointer-events:none!important;curs
       saveUsers();
     }
     const user=USERS[index];
-    if(user&&['role','center','clientCode'].includes(field)&&window.SPHERA_DB&&user.uid){
+    if(user&&['role','center','clientCode','responsibleCenter'].includes(field)&&window.SPHERA_DB&&user.uid){
       window.SPHERA_DB.collection('users').doc(user.uid).set({
         role:user.role,
         center:user.center||'',
+        responsibleCenter:user.responsibleCenter||'',
         clientId:user.clientId||'',
         clientCode:user.clientCode||'',
         clientName:user.clientName||''
