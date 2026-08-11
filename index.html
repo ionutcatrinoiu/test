@@ -5569,6 +5569,17 @@ cursor:pointer;
     const first=raw?capWords(raw.split(/\s+/)[0]):firstNameFromUsername(currentUser.username||'');
     const center=userCenterName()||'centrul tău';
     who.className='muted dashboard-identity';
+    if(String(currentUser.role||'').trim().toLowerCase()==='partner'){
+      const username=String(currentUser.username||'').trim().toLowerCase();
+      const account=(USERS||[]).find(user=>String(user.username||'').trim().toLowerCase()===username)||currentUser;
+      const client=(CLIENTS||[]).find(item=>String(item.code||'').trim()===String(account.clientCode||'').trim())
+        ||(CLIENTS||[]).find(item=>norm(item.name)===norm(account.clientName||''));
+      const opticName=client?.name||account.clientName||'Client neasociat';
+      who.innerHTML=`<div class="welcome-line">Bun venit, ${esc(first)}</div><div class="partner-optic-line">Optică: ${esc(opticName)}</div>`;
+      const badge=document.getElementById('accountBadge');
+      if(badge){badge.textContent=roleLabel(currentUser.role);badge.classList.remove('hide');}
+      return;
+    }
     const weatherLine=isAdmin()?'':`<div class="weather-line">Cum e vremea în ${esc(center)}?</div>`;
     who.innerHTML=`<div class="welcome-line">Bun venit, ${esc(first)}</div>${weatherLine}`;
     const badge=document.getElementById('accountBadge');
