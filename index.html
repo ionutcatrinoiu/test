@@ -11314,3 +11314,108 @@ body.partner-account #recentClientsBox{display:none!important}
  setTimeout(placeMobileBug,300);
 })();
 </script>
+<style>
+/* SPHERA mobile v5, corectii izolate pentru ecrane <= 900px */
+@media (max-width:900px){
+  /* Overlay pe tot viewport-ul, continutul popup-ului ramane intre header si bara browserului */
+  #modal.modal.open,
+  .modal.open{
+    position:fixed!important;
+    inset:0!important;
+    width:100vw!important;
+    height:100dvh!important;
+    padding:calc(env(safe-area-inset-top) + 92px) 12px calc(env(safe-area-inset-bottom) + 104px)!important;
+    background:rgba(16,24,40,.48)!important;
+    backdrop-filter:blur(10px)!important;
+    -webkit-backdrop-filter:blur(10px)!important;
+    align-items:center!important;
+    justify-content:center!important;
+    overflow:hidden!important;
+    z-index:2147483000!important;
+  }
+  #modal.modal.open>.wizard,
+  .modal.open>.wizard{
+    position:relative!important;
+    max-height:100%!important;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+    overscroll-behavior:contain!important;
+  }
+  /* Zona de navigare nu mai lasa continutul sa se vada dedesubt */
+  #modal .icon-btns,#modal .nav-circles,
+  .modal .icon-btns,.modal .nav-circles{
+    background:#fff!important;
+    padding-top:12px!important;
+    padding-bottom:2px!important;
+    z-index:20!important;
+  }
+  /* Prisma simpla, fara card/chenar exterior */
+  #modal .prism-toggle-row{
+    padding:0!important;
+    margin:8px 0 12px!important;
+    background:transparent!important;
+    border:0!important;
+    border-radius:0!important;
+    box-shadow:none!important;
+  }
+  /* Buton X pentru popup */
+  .mobile-modal-close{
+    position:sticky!important;
+    top:0!important;
+    margin:0 0 6px 0!important;
+    z-index:50!important;
+    width:38px!important;
+    height:38px!important;
+    min-width:38px!important;
+    border-radius:999px!important;
+    border:1px solid #e4e7ec!important;
+    background:#fff!important;
+    color:#101828!important;
+    box-shadow:0 8px 20px rgba(16,24,40,.10)!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    padding:0!important;
+    font-size:25px!important;
+    font-weight:400!important;
+    line-height:1!important;
+  }
+  /* Clienti, mai mult spatiu fata de header */
+  #clientsPage .mobile-add-client-btn{top:-42px!important;right:0!important}
+  /* Bug apare exclusiv in zona contului, langa Deconectare */
+  .menu .mobile-bug-btn,
+  .menu button[data-mobile-bug],
+  .side>.mobile-bug-btn{display:none!important}
+  .mobile-account-panel .mobile-bug-btn{display:inline-flex!important}
+}
+</style>
+<script>
+(()=>{
+ const isMob=()=>window.matchMedia('(max-width:900px)').matches;
+ function addClose(modal){
+   if(!isMob()||!modal||!modal.classList.contains('open'))return;
+   const w=modal.querySelector(':scope > .wizard');
+   if(!w||w.querySelector(':scope > .mobile-modal-close'))return;
+   const b=document.createElement('button');
+   b.type='button'; b.className='mobile-modal-close'; b.setAttribute('aria-label','Închide'); b.innerHTML='×';
+   b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation(); if(modal.id==='modal'){modal.classList.remove('open');modal.innerHTML='';}else modal.remove();});
+   w.insertBefore(b,w.firstChild);
+ }
+ function fixBugButtons(){
+   if(!isMob())return;
+   document.querySelectorAll('.mobile-bug-btn').forEach(b=>{if(!b.closest('.mobile-account-panel'))b.remove()});
+ }
+ function apply(){
+   if(!isMob())return;
+   document.querySelectorAll('.modal.open').forEach(addClose);
+   fixBugButtons();
+ }
+ const oldDraw=window.drawStep;
+ if(typeof oldDraw==='function')window.drawStep=function(){const r=oldDraw.apply(this,arguments);requestAnimationFrame(apply);return r};
+ const oldShow=window.showPage;
+ if(typeof oldShow==='function')window.showPage=function(){const r=oldShow.apply(this,arguments);requestAnimationFrame(apply);return r};
+ document.addEventListener('click',()=>requestAnimationFrame(apply),true);
+ document.addEventListener('DOMContentLoaded',()=>setTimeout(apply,80));
+ setTimeout(apply,250);
+})();
+</script>
