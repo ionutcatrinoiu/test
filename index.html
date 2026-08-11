@@ -10424,13 +10424,16 @@ body.partner-account #recentClientsBox{display:none!important}
       const workflow=workflowFor(order),current=workflowPosition(order);
       return status===workflow[workflow.length-1]&&current===workflow.length-2;
     }
-    if(partnerCreatedOrder(order)&&['operator','iasi'].includes(roleKey(currentUser?.role))){
-      const responsible=orderResponsibleCenter(order);
-      const master=roleKey(currentUser?.role)==='iasi';
-      if(!master&&norm(currentUser?.center)!==norm(responsible))return false;
+    if(partnerCreatedOrder(order)){
       const workflow=typeof orderWorkflowSteps==='function'?orderWorkflowSteps(order):WORKFLOW_STEPS;
       const current=typeof orderWorkflowIndex==='function'?orderWorkflowIndex(order):workflowIndex(order);
-      return workflow.indexOf(status)===current+1;
+      const target=workflow.indexOf(status);
+      const finalStep=workflow.length-1;
+      if(target===finalStep)return false;
+      if(!['operator','iasi'].includes(roleKey(currentUser?.role)))return baseCanSetWorkflowStep.apply(this,arguments);
+      const responsible=orderResponsibleCenter(order);
+      if(norm(currentUser?.center)!==norm(responsible))return false;
+      return target===current+1&&target<finalStep;
     }
     return baseCanSetWorkflowStep.apply(this,arguments)
   };
