@@ -4615,7 +4615,7 @@ cursor:pointer;
   const CLOUD_KEYS=['sphera_user_clients','sphera_v19_centers','sphera_v19_indices','sphera_v19_materials','sphera_v19_products','sphera_v19_treatments'];
   let cloudReady=false, applyingRemote=false, saveTimer=null, unsubscribeShared=null, unsubscribeUsers=null;
   let unsubscribeOrders=null, unsubscribeDeletedOrders=null, applyingOrdersRemote=false, ordersReady=false, ordersInitializing=false;
-  let ordersSaveTimer=null, ordersPendingSave=false, lastLocalOrderIds=new Set(), deletedOrderIds=new Set();
+  let ordersSaveTimer=null, ordersPendingSave=false, lastLocalOrderIds=new Set(), lastLocalOrdersById=new Map(), deletedOrderIds=new Set();
 
   function setCloudStatus(text,type){
     let el=document.getElementById('spheraCloudStatus');
@@ -4763,6 +4763,7 @@ cursor:pointer;
         })
         .map(item=>item.order);
       lastLocalOrderIds=new Set(orders.map(o=>String(o.id)));
+      lastLocalOrdersById=new Map(orders.map(order=>[String(order.id),cleanOrderForCloud(order)]));
       originalSetItem('rx_orders',JSON.stringify(orders));
       if(typeof render==='function')render();
       if(typeof renderProcessingOrders==='function')renderProcessingOrders();
@@ -4806,11 +4807,14 @@ cursor:pointer;
       }
       for(const id of deletedIds){
         const docId=encodeURIComponent(String(id)).replace(/%/g,'_').slice(0,900);
+        const deletedOrder=lastLocalOrdersById.get(String(id))||null;
         batch.delete(ORDERS_COL.doc(docId));
         batch.set(DELETED_ORDERS_COL.doc(docId),{
           orderId:String(id),
+          order:deletedOrder,
           deletedAt:firebase.firestore.FieldValue.serverTimestamp(),
-          deletedBy:auth.currentUser.uid
+          deletedBy:auth.currentUser.uid,
+          deletedByName:currentUser?.name||currentUser?.username||'Utilizator'
         },{merge:true});
         deletedOrderIds.add(String(id));
         operations+=2;
@@ -4823,6 +4827,7 @@ cursor:pointer;
         updatedAt:firebase.firestore.FieldValue.serverTimestamp()
       },{merge:true});
       lastLocalOrderIds=currentIds;
+      lastLocalOrdersById=new Map(current.map(order=>[String(order.id),cleanOrderForCloud(order)]));
       ordersPendingSave=false;
       setCloudStatus('Cloud: sincronizat','ok');
     }catch(e){
@@ -4873,11 +4878,21 @@ cursor:pointer;
   function startDeletedOrdersSync(){
     if(unsubscribeDeletedOrders)unsubscribeDeletedOrders();
     unsubscribeDeletedOrders=DELETED_ORDERS_COL.onSnapshot(snap=>{
-      deletedOrders=snap.docs.map(doc=>doc.data()||{}).filter(item=>item.order).map(item=>({
-        ...item,
-        orderId:String(item.orderId||item.order?.id||''),
-        deletedBy:item.deletedByName||item.deletedBy||'Utilizator'
-      }));
+      const localArchive=new Map((Array.isArray(deletedOrders)?deletedOrders:[]).map(item=>[
+        String(item.orderId||item.order?.id||''),item
+      ]));
+      deletedOrders=snap.docs.map(doc=>{
+        const item=doc.data()||{};
+        const orderId=String(item.orderId||item.order?.id||'');
+        const localItem=localArchive.get(orderId)||{};
+        return {
+          ...localItem,
+          ...item,
+          orderId,
+          order:item.order||localItem.order||null,
+          deletedBy:item.deletedByName||item.deletedBy||localItem.deletedBy||'Utilizator'
+        };
+      }).filter(item=>item.order);
       originalSetItem('sphera_deleted_orders_history',JSON.stringify(deletedOrders));
       deletedOrderIds=new Set(
         snap.docs.map(doc=>String(doc.data()?.orderId||'')).filter(Boolean)
@@ -4889,6 +4904,7 @@ cursor:pointer;
         applyingOrdersRemote=true;
         orders=filtered;
         lastLocalOrderIds=new Set(orders.map(order=>String(order.id)));
+        lastLocalOrdersById=new Map(orders.map(order=>[String(order.id),cleanOrderForCloud(order)]));
         originalSetItem('rx_orders',JSON.stringify(orders));
         if(typeof render==='function')render();
         if(typeof renderProcessingOrders==='function')renderProcessingOrders();
@@ -4950,6 +4966,7 @@ cursor:pointer;
       originalSetItem('sphera_deleted_orders_history',JSON.stringify(deletedOrders));
       deletedOrderIds.delete(orderId);
       lastLocalOrderIds=new Set(orders.map(order=>String(order.id)));
+      lastLocalOrdersById=new Map(orders.map(order=>[String(order.id),cleanOrderForCloud(order)]));
       applyingOrdersRemote=true;
       originalSetItem('rx_orders',JSON.stringify(orders));
       applyingOrdersRemote=false;
@@ -4987,6 +5004,7 @@ cursor:pointer;
       deletedOrders=deletedOrders.filter(item=>String(item.orderId||item.order?.id||'')!==id);
       if(!orders.some(order=>String(order.id)===id))orders.unshift(restoredOrder);
       lastLocalOrderIds.add(id);
+      lastLocalOrdersById.set(id,cleanOrderForCloud(restoredOrder));
       originalSetItem('rx_orders',JSON.stringify(orders));
       originalSetItem('sphera_deleted_orders_history',JSON.stringify(deletedOrders));
       if(typeof render==='function')render();
