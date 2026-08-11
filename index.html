@@ -11681,3 +11681,76 @@ body.partner-account #recentClientsBox{display:none!important}
   setTimeout(applyClientsAction,250);
 })();
 </script>
+
+<!-- SPHERA mobile v13: restore client cards and match Dashboard button -->
+<style id="sphera-mobile-v13-clients-visual-fix">
+@media screen and (max-width:760px){
+  #clientsPage .clients-mobile-actions .clients-dashboard-add{
+    background:#1f66ff!important;
+    color:#fff!important;
+    border:1px solid #1f66ff!important;
+    box-shadow:none!important;
+  }
+  #clientsPage .mobile-client-cards{
+    display:grid!important;
+    gap:12px!important;
+    margin-top:16px!important;
+  }
+  #clientsPage .mobile-client-card{
+    position:relative!important;
+    width:100%!important;
+    box-sizing:border-box!important;
+    background:#fff!important;
+    border:1px solid #dce4ee!important;
+    border-radius:18px!important;
+    padding:16px 58px 16px 16px!important;
+    box-shadow:0 4px 14px rgba(16,24,40,.035)!important;
+  }
+  #clientsPage .mobile-client-card .client-name{
+    font-size:15px!important;
+    font-weight:800!important;
+    line-height:1.3!important;
+    margin-bottom:14px!important;
+  }
+  #clientsPage .mobile-client-grid{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+    gap:14px 18px!important;
+  }
+  #clientsPage .mobile-client-grid .full{grid-column:1/-1!important;}
+  #clientsPage .mobile-client-label{
+    display:block!important;
+    color:#667085!important;
+    font-size:9.5px!important;
+    font-weight:900!important;
+    text-transform:uppercase!important;
+    margin-bottom:4px!important;
+  }
+  #clientsPage .mobile-client-value{
+    font-size:13.5px!important;
+    font-weight:700!important;
+    overflow-wrap:anywhere!important;
+  }
+  #clientsPage .mobile-client-delete{position:absolute!important;right:14px!important;top:14px!important;}
+}
+</style>
+<script id="sphera-mobile-v13-client-cards-refresh">
+(()=>{
+ const mobile=()=>matchMedia('(max-width:760px)').matches;
+ function refresh(){
+   if(!mobile())return;
+   const page=document.getElementById('clientsPage');
+   const host=page?.querySelector('.mobile-client-cards');
+   if(host)host.dataset.signature='';
+   if(typeof window.renderClients==='function' && page && !page.classList.contains('hide')){
+     window.renderClients();
+     requestAnimationFrame(()=>{
+       if(typeof clientCards==='function')clientCards();
+     });
+   }
+ }
+ document.addEventListener('DOMContentLoaded',()=>setTimeout(refresh,120));
+ const prev=window.showPage;
+ if(typeof prev==='function')window.showPage=function(){const r=prev.apply(this,arguments);if(arguments[0]==='clientsPage')setTimeout(refresh,30);return r};
+})();
+</script>
