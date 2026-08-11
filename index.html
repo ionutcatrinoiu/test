@@ -11048,6 +11048,21 @@ body.partner-account #recentClientsBox{display:none!important}
   }
 }
 </style>
+
+<style id="sphera-mobile-v9-client-button-spacing">
+@media (max-width:900px){
+  /* Clienți: butonul păstrează geometria din Dashboard și are spațiu real față de card. */
+  #clientsPage{padding-top:84px!important;}
+  #clientsPage .mobile-add-client-btn{
+    top:0!important;
+    right:0!important;
+    width:calc(50% - 6px)!important;
+    height:52px!important;
+    margin:0!important;
+  }
+  #clientsPage>.card:first-of-type{margin-top:0!important;}
+}
+</style>
 </body>
 </html>
 
