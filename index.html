@@ -10266,6 +10266,18 @@ body.partner-account #recentClientsBox{display:none!important}
   window.canDeleteOrder=function(order){return isPartner()?false:baseCanDeleteOrder.apply(this,arguments)};
   const baseCanSetWorkflowStep=window.canSetWorkflowStep;
   const partnerCreatedOrder=order=>roleKey(order?.createdByRole)==='partner'||roleKey(order?.launchedByType)==='partener'||!!order?.partnerClientCode;
+  const baseProcessingCenterLabel=window.processingCenterLabel;
+  window.processingCenterLabel=function(order){
+    if(!partnerCreatedOrder(order))return baseProcessingCenterLabel.apply(this,arguments);
+    let code=String(order?.operatorCode||'').replace(/\D/g,'').padStart(2,'0').slice(-2);
+    if(!code||code==='00'){
+      const username=clean(order?.createdByUsername||order?.createdByAccount).toLowerCase();
+      const creator=(USERS||[]).find(user=>username&&clean(user.username).toLowerCase()===username)
+        ||(USERS||[]).find(user=>norm(user.name||'')===norm(order?.createdByName||order?.operator||''));
+      code=String(creator?.operatorCode||creator?.code||'').replace(/\D/g,'').padStart(2,'0').slice(-2);
+    }
+    return [code&&code!=='00'?code:'','Extern'].filter(Boolean).join(' · ')
+  };
   const workflowFor=order=>typeof orderWorkflowSteps==='function'?orderWorkflowSteps(order):WORKFLOW_STEPS;
   const workflowPosition=order=>typeof orderWorkflowIndex==='function'?orderWorkflowIndex(order):workflowIndex(order);
   const isPenultimateStatus=order=>{
