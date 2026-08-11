@@ -11063,6 +11063,31 @@ body.partner-account #recentClientsBox{display:none!important}
   #clientsPage>.card:first-of-type{margin-top:0!important;}
 }
 </style>
+
+<style id="sphera-mobile-v10-client-action-exact-dashboard">
+@media (max-width:900px){
+  /* Clienți: butonul urmează fluxul Dashboard, pe coloana din dreapta, nu plutește lângă titlu. */
+  #clientsPage{padding-top:0!important;}
+  #clientsPage .mobile-add-client-btn{
+    position:relative!important;
+    inset:auto!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    width:calc(50% - 4px)!important;
+    min-width:0!important;
+    height:42px!important;
+    min-height:42px!important;
+    margin:0 0 12px auto!important;
+    padding:9px 10px!important;
+    border-radius:13px!important;
+    font-size:13px!important;
+    font-weight:800!important;
+    line-height:1!important;
+  }
+  #clientsPage>.card:first-of-type{margin-top:0!important;}
+}
+</style>
 </body>
 </html>
 
