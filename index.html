@@ -10878,6 +10878,13 @@ body.partner-account #recentClientsBox{display:none!important}
 </style>
 <script>
 (function(){
+  const previousShowGeneratedCode=window.showGeneratedCode;
+  if(typeof previousShowGeneratedCode==='function')window.showGeneratedCode=function(code){
+    document.querySelectorAll('.order-creation-loader').forEach(loader=>loader.remove());
+    document.querySelectorAll('[aria-busy="true"]').forEach(element=>element.removeAttribute('aria-busy'));
+    return previousShowGeneratedCode.apply(this,arguments)
+  };
+
   function dashboardCardMode(card){const match=String(card?.getAttribute('onclick')||'').match(/showOrdersList\(['"]([^'"]+)['"]\)/);return match?match[1]:'all'}
   function currentDashboardMode(){try{return String(orderViewMode||'all')}catch(_){return'all'}}
   window.updateDashboardFilterCards=function(mode){
