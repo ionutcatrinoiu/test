@@ -8963,7 +8963,7 @@ html>.sphera-edit-popup.modal.open>.wizard{
       const centerOperator=(CENTERS||[]).find(item=>name&&norm(item?.operator||'')===norm(name));
       code=String(user?.operatorCode||user?.code||centerOperator?.operatorCode||'').replace(/\D/g,'').padStart(2,'0').slice(-2);
     }
-    return name+(code&&code!=='00'?' · cod '+code:'');
+    return (code&&code!=='00'?code+' ':'')+name;
   }
   function isAdministratorHistory(entry){
     const role=String(entry?.role||'').trim().toLowerCase();
