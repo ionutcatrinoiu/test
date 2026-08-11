@@ -1364,9 +1364,10 @@ pointer-events:none;
 <div class="menu">
 <button class="active" data-access="basic" id="menuDashboard" onclick="showPage('dashboard',this)"><span>Dashboard</span><span>01</span></button>
 <button data-access="basic" id="menuClients" onclick="showPage('clientsPage',this)"><span>Clienți</span><span>02</span></button>
-<button data-access="basic" id="menuProcessing" onclick="showPage('processingPage',this)"><span>Status comenzi</span><span>03</span></button>
-<button class="hide" data-access="admin" id="menuNomenclators" onclick="showPage('nomenclators',this)"><span>Nomenclatoare</span><span>04</span></button>
-<button class="hide" data-access="admin" id="menuSettings" onclick="showPage('settings',this)"><span>Setări</span><span>05</span></button>
+<button data-access="basic" id="menuHistory" onclick="openHistoricalOrders(this)"><span>Istoric comenzi</span><span>03</span></button>
+<button data-access="basic" id="menuProcessing" onclick="showPage('processingPage',this)"><span>Status comenzi</span><span>04</span></button>
+<button class="hide" data-access="admin" id="menuNomenclators" onclick="showPage('nomenclators',this)"><span>Nomenclatoare</span><span>05</span></button>
+<button class="hide" data-access="admin" id="menuSettings" onclick="showPage('settings',this)"><span>Setări</span><span>06</span></button>
 </div>
 </aside>
 <main class="main">
@@ -1400,6 +1401,24 @@ pointer-events:none;
 <div class="card" id="dashboardClientsCard" style="margin-top:16px">
 <div class="top" style="margin-bottom:12px"><div><h2 style="margin:0">Ultimii 10 clienți adăugați</h2><div class="muted">Lista poate fi ascunsă sau afișată.</div></div><button aria-label="Ascunde lista" class="icon-btn list-toggle" id="toggleClientsBtn" onclick="toggleRecentClients()" title="Ascunde lista"><span class="toggle-chevron"><svg aria-hidden="true" viewbox="0 0 24 24"><path d="M6 15l6-6 6 6"></path></svg></span></button></div>
 <div class="table-wrap" id="recentClientsBox"><table><thead><tr><th>Client</th><th>Localitate</th><th>Cod</th></tr></thead><tbody id="recentClientRows"></tbody></table></div>
+</div>
+</section>
+<section class="page hide" id="historyPage">
+<div class="grid dashboard-stats history-summary-grid">
+<button aria-pressed="true" class="card stat-btn history-stat active" id="historyCardAll" onclick="setHistoryCardFilter('all')"><div class="muted">Comenzi istorice</div><div class="kpi" id="historyTotal">0</div><small>Importate din sistemul anterior</small></button>
+<button aria-pressed="false" class="card stat-btn history-stat" id="historyCardClients" onclick="setHistoryCardFilter('clients')"><div class="muted">Clienți</div><div class="kpi" id="historyClients">0</div><small>O comandă pentru fiecare client</small></button>
+<button aria-pressed="false" class="card stat-btn history-stat" id="historyCardCodes" onclick="setHistoryCardFilter('codes')"><div class="muted">Coduri distincte</div><div class="kpi" id="historyCodes">0</div><small>O comandă pentru fiecare cod</small></button>
+<button aria-pressed="false" class="card stat-btn history-stat" id="historyCardIssues" onclick="setHistoryCardFilter('issues')"><div class="muted">Necesită verificare</div><div class="kpi" id="historyIssues">0</div><small>Coduri repetate sau atipice</small></button>
+</div>
+<div class="card history-main-card">
+<div class="history-head">
+<div><h2>Istoric comenzi</h2><div class="muted">Comenzile realizate înainte de migrarea pe SPHERA. Acestea nu intră în fluxul activ și nu modifică numerotarea globală.</div></div>
+<div class="history-actions"><input accept=".xlsx,.xls" id="historyFileInput" onchange="importHistoricalOrders(this)" type="file"/><button class="btn history-import-btn" id="historyImportBtn" onclick="document.getElementById('historyFileInput').click()">Importă Excel</button></div>
+</div>
+<div class="history-tools"><div class="history-search-wrap"><span aria-hidden="true" class="history-search-icon">⌕</span><input id="historySearch" oninput="renderHistoricalOrders(true)" placeholder="Caută după client, cod sau produs"/></div><select id="historyIssueFilter" onchange="renderHistoricalOrders(true)"><option value="all">Toate comenzile</option><option value="issues">Necesită verificare</option><option value="duplicates">Cod repetat</option></select><span class="pill count-dot" id="historyFilterCount">0</span></div>
+<div class="history-empty" id="historyEmpty"><div class="history-empty-icon">◷</div><h3>Nu există comenzi istorice importate</h3><p>Încarcă fișierul Excel pentru a păstra comenzile realizate înainte de migrarea pe SPHERA.</p></div>
+<div class="table-wrap history-table-wrap" id="historyTableWrap"><table><thead><tr><th>Cod RX istoric</th><th>Centru</th><th>Client</th><th>Produs original</th><th>Pacient</th><th>Status</th></tr></thead><tbody id="historyRows"></tbody></table></div>
+<div class="history-footer" id="historyFooter"><span id="historyRange"></span><div class="history-pagination"><button onclick="changeHistoryPage(-1)">‹</button><span id="historyPageNumber">1</span><button onclick="changeHistoryPage(1)">›</button></div></div>
 </div>
 </section>
 <section class="page hide" id="clientsPage">
@@ -4812,10 +4831,34 @@ cursor:pointer;
   function orderDocId(order){
     return encodeURIComponent(String(order?.id||'')).replace(/%/g,'_').slice(0,900);
   }
+  const PENDING_ORDERS_KEY='sphera_pending_orders_v1';
+  function pendingOrders(){
+    const list=parseStored(PENDING_ORDERS_KEY,[]);
+    return Array.isArray(list)?list.filter(order=>order&&order.id).map(cleanOrderForCloud):[];
+  }
+  function storePendingOrders(list){
+    originalSetItem(PENDING_ORDERS_KEY,JSON.stringify(Array.isArray(list)?list:[]));
+  }
+  function queuePendingOrder(order){
+    const clean=cleanOrderForCloud(order);
+    const list=pendingOrders().filter(item=>String(item.id)!==String(clean.id));
+    list.unshift(clean);
+    storePendingOrders(list);
+    return clean;
+  }
+  function clearPendingOrderIds(ids){
+    const savedIds=new Set((ids||[]).map(String));
+    if(!savedIds.size)return;
+    storePendingOrders(pendingOrders().filter(order=>!savedIds.has(String(order.id))));
+  }
   function applyOrdersFromCloud(list){
     applyingOrdersRemote=true;
     try{
-      const cloudList=Array.isArray(list)?list:[];
+      const cloudList=Array.isArray(list)?list.slice():[];
+      const cloudIds=new Set(cloudList.map(order=>String(order?.id||'')));
+      pendingOrders().forEach(order=>{
+        if(!cloudIds.has(String(order.id)))cloudList.push(order);
+      });
       orderTombstoneIds=new Set(cloudList.filter(order=>order?._deleted===true).map(order=>String(order?.id||'')).filter(Boolean));
       orderTombstoneIds.forEach(id=>pendingDeletedOrderIds.delete(id));
       refreshDeletedOrderIds();
@@ -4842,6 +4885,41 @@ cursor:pointer;
       setTimeout(()=>{applyingOrdersRemote=false},0);
     }
   }
+  window.SPHERA_saveOrderNow=async function(order){
+    if(!order?.id)return false;
+    const clean=queuePendingOrder(order);
+    originalSetItem('rx_orders',JSON.stringify(Array.isArray(orders)?orders:[]));
+    if(!auth.currentUser){
+      ordersPendingSave=true;
+      setCloudStatus('Cloud: comanda așteaptă sincronizarea','wait');
+      return false;
+    }
+    setCloudStatus('Cloud: se salvează comanda','wait');
+    try{
+      const batch=db.batch();
+      batch.set(ORDERS_COL.doc(orderDocId(clean)),{
+        ...clean,
+        _cloudUpdatedAt:firebase.firestore.FieldValue.serverTimestamp(),
+        _cloudUpdatedBy:auth.currentUser.uid
+      },{merge:false});
+      batch.set(ORDERS_STATE_REF,{
+        initialized:true,
+        updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+      },{merge:true});
+      await batch.commit();
+      clearPendingOrderIds([clean.id]);
+      lastLocalOrderIds.add(String(clean.id));
+      lastLocalOrdersById.set(String(clean.id),clean);
+      setCloudStatus('Cloud: comanda a fost salvată','ok');
+      return true;
+    }catch(error){
+      console.error('SPHERA immediate order save error',error);
+      ordersPendingSave=true;
+      setCloudStatus('Cloud: comanda este păstrată pentru reîncercare','error');
+      scheduleOrdersSave();
+      return false;
+    }
+  };
   async function writeOrdersToCloud(){
     if(!auth.currentUser||applyingOrdersRemote)return;
     if(!ordersReady){
@@ -4911,6 +4989,7 @@ cursor:pointer;
       },{merge:true});
       lastLocalOrderIds=currentIds;
       lastLocalOrdersById=new Map(current.map(order=>[String(order.id),cleanOrderForCloud(order)]));
+      clearPendingOrderIds(current.map(order=>order.id));
       ordersPendingSave=false;
       setCloudStatus('Cloud: sincronizat','ok');
     }catch(e){
@@ -8809,9 +8888,9 @@ html>.sphera-edit-popup.modal.open>.wizard{
 
   function arrangeHeader(){
     const menu=document.querySelector('.side>.menu'); if(!menu)return;
-    const dash=document.getElementById('menuDashboard'), status=document.getElementById('menuProcessing'), clients=document.getElementById('menuClients'), nom=document.getElementById('menuNomenclators'), settings=document.getElementById('menuSettings');
+    const dash=document.getElementById('menuDashboard'), status=document.getElementById('menuProcessing'), clients=document.getElementById('menuClients'), history=document.getElementById('menuHistory'), nom=document.getElementById('menuNomenclators'), settings=document.getElementById('menuSettings');
     if(menu.dataset.v90Order!=='ready'){
-      [dash,status,clients,nom,settings].forEach(el=>{if(el)menu.appendChild(el)});
+      [dash,status,clients,history,nom,settings].forEach(el=>{if(el)menu.appendChild(el)});
       menu.dataset.v90Order='ready';
     }
     menu.querySelectorAll('button').forEach(btn=>{const spans=btn.querySelectorAll(':scope>span');if(spans.length>1)spans[spans.length-1].remove()});
@@ -10003,10 +10082,16 @@ html>.sphera-edit-popup.modal.open>.wizard{
         deliveryDestination:String(draft.deliveryDestination||'center').startsWith('center:')?'center':(draft.deliveryDestination||'center'),
         deliveryCenter:String(draft.deliveryDestination||'').startsWith('center:')?String(draft.deliveryDestination).slice(7):(draft.deliveryCenter||draft.center||''),
         center:draft.center,operator:draft.operator,operatorCode,notes:draft.notes,status:'Lansată',workflowStatus:'Lansată',
+        createdById:currentUser?.uid||currentUser?.id||'',createdByUid:currentUser?.uid||'',
+        createdByUsername:currentUser?.username||'',createdByName:currentUser?.name||draft.operator||'',
+        createdByRole:currentUser?.role||'operator',createdByCenter:currentUser?.center||draft.center||'',
         rx:{odActive:draft.odActive!==false,osActive:draft.osActive!==false,odSph:draft.odSph||'',odCyl:draft.odCyl||'',odAx:draft.odAx||'',odAdd:draft.odAdd||'',osSph:draft.osSph||'',osCyl:draft.osCyl||'',osAx:draft.osAx||'',osAdd:draft.osAdd||'',prismEnabled:draft.prismEnabled===true,odPrism:draft.odPrism||'',odBase:draft.odBase||'',osPrism:draft.osPrism||'',osBase:draft.osBase||''}
       };
       orders.unshift(order);
-      try{saveOrderWithRecovery()}
+      try{
+        saveOrderWithRecovery();
+        if(typeof window.SPHERA_saveOrderNow==='function')await window.SPHERA_saveOrderNow(order);
+      }
       catch(error){
         const index=orders.findIndex(item=>String(item.id)===String(order.id));
         if(index>=0)orders.splice(index,1);
@@ -10304,6 +10389,7 @@ html>.sphera-edit-popup.modal.open>.wizard{
 </script>
 <style id="sphera-partner-role-style">
 body.partner-account #menuClients,
+body.partner-account #menuHistory,
 body.partner-account #menuNomenclators,
 body.partner-account #menuSettings,
 body.partner-account #newClientBtn,
@@ -10449,7 +10535,7 @@ body.partner-account #recentClientsBox{display:none!important}
   function enforcePartnerUI(){
     const partner=isPartner();
     document.body.classList.toggle('partner-account',partner);
-    ['menuClients','menuNomenclators','menuSettings'].forEach(id=>{
+    ['menuClients','menuHistory','menuNomenclators','menuSettings'].forEach(id=>{
       const element=document.getElementById(id);
       if(element)element.style.setProperty('display',partner?'none':'','important');
     });
@@ -10691,6 +10777,124 @@ body.partner-account #recentClientsBox{display:none!important}
   if(typeof baseDashboardExport==='function')window.dashboardOrdersForExport=function(){const list=baseDashboardExport.apply(this,arguments);return isPartner()?list.filter(order=>creatorMatches(order)):list};
   ensurePartnerUserFields();
   enforcePartnerUI();
+})();
+</script>
+<style>
+.grid.dashboard-stats.history-summary-grid{width:100%!important;max-width:none!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;margin-bottom:16px}
+.history-stat{width:100%!important;min-width:0!important;padding:20px!important;cursor:pointer!important;transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease!important}.history-stat:hover{transform:translateY(-2px)!important;border-color:#b7ccff!important}.history-stat.active{border-color:#165dff!important;box-shadow:0 18px 44px rgba(22,93,255,.15)!important}.history-stat.active .muted,.history-stat.active .kpi{color:#165dff!important}.history-stat small{display:block;color:var(--muted);font-size:12px;margin-top:5px}
+.history-main-card{padding:0!important;overflow:hidden}.history-head{display:flex;justify-content:space-between;align-items:center;gap:18px;padding:22px;border-bottom:1px solid var(--line)}.history-head h2{margin:0 0 7px}.history-head .muted{max-width:760px;line-height:1.5}.history-actions input{display:none}.history-tools{display:flex;align-items:center;gap:12px;padding:16px 22px;background:#f8fbff;border-bottom:1px solid var(--line)}.history-search-wrap{position:relative;display:flex;align-items:center;flex:1 1 75%!important;min-width:420px}.history-search-wrap input{width:100%!important;padding-left:44px!important;background:#fff!important}.history-search-icon{position:absolute;left:16px;z-index:1;color:#667085;font-size:22px;line-height:1;pointer-events:none}.history-tools select{flex:0 0 240px!important;width:240px!important;max-width:240px!important}.history-table-wrap{max-height:62vh}.history-table-wrap td{vertical-align:top}.history-product{white-space:normal!important;min-width:230px;max-width:380px}.history-product small{display:block;color:var(--muted);margin-top:5px}.history-code{font-weight:900}.history-issue{display:block;width:max-content;margin-top:5px;padding:3px 7px;border-radius:999px;background:#fef3c7;color:#a16207;font-size:10px;font-weight:800}.history-status{display:inline-flex;padding:6px 10px;border-radius:999px;background:#e9eef6;color:#42526a;font-weight:800;font-size:11px}.history-clickable{cursor:pointer;transition:background .16s ease}.history-clickable:hover,.history-clickable:focus{background:#f3f7ff!important;outline:none}.history-clickable:focus{box-shadow:inset 3px 0 #165dff}.history-empty{text-align:center;padding:55px 20px}.history-empty-icon{width:54px;height:54px;margin:0 auto 12px;border-radius:18px;display:grid;place-items:center;background:#eaf1ff;color:#165dff;font-size:28px}.history-empty h3{margin:0 0 8px}.history-empty p{margin:0 auto;color:var(--muted);max-width:570px}.history-footer{display:flex;justify-content:space-between;align-items:center;padding:13px 22px;border-top:1px solid var(--line);color:var(--muted);font-size:12px}.history-pagination{display:flex;align-items:center;gap:8px}.history-pagination button{width:34px;height:34px;border:1px solid var(--line);border-radius:10px;background:white;color:#165dff;font-size:20px}.history-pagination span{min-width:34px;text-align:center;font-weight:900;color:var(--ink)}
+.history-detail-grid{display:grid;grid-template-columns:150px 1fr;gap:0;margin-top:14px;border-top:1px solid var(--line)}.history-detail-grid div{padding:11px 0;border-bottom:1px solid var(--line)}.history-detail-grid .label{color:var(--muted)}
+@media(max-width:1050px){.grid.dashboard-stats.history-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}.history-head{align-items:flex-start;flex-direction:column}.history-actions{width:100%}.history-import-btn{width:100%}.history-tools{flex-wrap:wrap}.history-search-wrap{flex-basis:100%!important;min-width:100%}.history-tools select{flex:1 1 auto!important;width:auto!important;max-width:none!important}}
+@media(max-width:700px){.grid.dashboard-stats.history-summary-grid{grid-template-columns:1fr 1fr!important;gap:10px}.history-stat{padding:14px!important}.history-stat .kpi{font-size:27px}.history-tools{padding:12px}.history-search-wrap{min-width:100%}.history-tools select{width:calc(100% - 56px)!important}.history-head{padding:16px}.history-footer{padding:12px;align-items:flex-start;gap:10px}.history-detail-grid{grid-template-columns:110px 1fr}}
+</style>
+<script>
+(function(){
+  const HISTORY_KEY='sphera_historical_orders_v1';
+  const PAGE_SIZE=25;
+  let historyPageIndex=1;
+  let historyCardFilter='all';
+  let historicalOrders=[];
+  try{historicalOrders=JSON.parse(localStorage.getItem(HISTORY_KEY)||'[]');if(!Array.isArray(historicalOrders))historicalOrders=[]}catch(e){historicalOrders=[]}
+  window.historicalOrders=historicalOrders;
+
+  function hEsc(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+  function normalizedCode(value){return String(value??'').replace(/\.0$/,'').trim()}
+  function codeDate(code,year){
+    const raw=normalizedCode(code);const value=raw.length===11?'0'+raw:raw;const day=value.slice(0,2),month=value.slice(2,4);
+    if(!/^\d{2}$/.test(day)||!/^\d{2}$/.test(month)||Number(day)<1||Number(day)>31||Number(month)<1||Number(month)>12)return'';
+    return day+'.'+month+'.'+year
+  }
+  function enrichDates(rows){
+    let year=new Date().getFullYear()-1,previousMonth=0;
+    rows.forEach((row,index)=>{const code=normalizedCode(row.code),value=code.length===11?'0'+code:code,month=Number(value.slice(2,4));if(index&&previousMonth>=10&&month<=2)year++;row.date=codeDate(code,year);if(month>=1&&month<=12)previousMonth=month});
+    return rows
+  }
+  function duplicateCodes(rows){const counts={};rows.forEach(row=>counts[row.code]=(counts[row.code]||0)+1);return counts}
+  function historyNorm(value){try{return norm(value)}catch(_){return String(value||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim()}}
+  function historyCenter(value){return historyNorm(value).replace(/^\d+\s*[-–—:]\s*/,'').replace(/\bcentru(l)?\b/g,'').trim()}
+  function historyIsAdmin(){return ['admin','administrator'].includes(historyNorm(currentUser?.role))}
+  function historyAllowedCenters(){
+    if(historyIsAdmin())return null;
+    const assigned=Array.isArray(currentUser?.warehouses)&&currentUser.warehouses.length?currentUser.warehouses:[currentUser?.center||currentUser?.location||''];
+    return new Set(assigned.map(historyCenter).filter(Boolean))
+  }
+  function historyScopedOrders(){const allowed=historyAllowedCenters();if(allowed===null)return historicalOrders.slice();return historicalOrders.filter(row=>allowed.has(historyCenter(row.center)))}
+  function uniqueHistoricalRows(rows,keyFn){const seen=new Set();return rows.filter(row=>{const key=historyNorm(keyFn(row));if(!key||seen.has(key))return false;seen.add(key);return true})}
+  function currentFiltered(){
+    const q=historyNorm(document.getElementById('historySearch')?.value||''),mode=document.getElementById('historyIssueFilter')?.value||'all',scoped=historyScopedOrders(),counts=duplicateCodes(scoped);
+    let rows=scoped.filter(row=>{const duplicate=counts[row.code]>1,atypical=!/^\d{12}$/.test(row.code),issue=duplicate||atypical;row.duplicate=duplicate;row.atypical=atypical;if(mode==='issues'&&!issue)return false;if(mode==='duplicates'&&!duplicate)return false;if(historyCardFilter==='issues'&&!issue)return false;return !q||[row.code,row.client,row.product].some(v=>historyNorm(v).includes(q))});
+    if(historyCardFilter==='clients')rows=uniqueHistoricalRows(rows,row=>row.client);
+    if(historyCardFilter==='codes')rows=uniqueHistoricalRows(rows,row=>row.code);
+    return rows
+  }
+  function updateHistoryStats(){
+    const scoped=historyScopedOrders(),counts=duplicateCodes(scoped),issues=scoped.filter(row=>(counts[row.code]||0)>1||!/^\d{12}$/.test(row.code)).length;
+    const set=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=Number(value||0).toLocaleString('ro-RO')};
+    set('historyTotal',scoped.length);set('historyClients',new Set(scoped.map(x=>historyNorm(x.client)).filter(Boolean)).size);set('historyCodes',new Set(scoped.map(x=>x.code).filter(Boolean)).size);set('historyIssues',issues)
+  }
+  window.setHistoryCardFilter=function(mode){
+    historyCardFilter=['all','clients','codes','issues'].includes(mode)?mode:'all';
+    const map={all:'historyCardAll',clients:'historyCardClients',codes:'historyCardCodes',issues:'historyCardIssues'};
+    Object.entries(map).forEach(([key,id])=>{const card=document.getElementById(id),active=key===historyCardFilter;if(card){card.classList.toggle('active',active);card.setAttribute('aria-pressed',String(active))}});
+    renderHistoricalOrders(true)
+  };
+  window.renderHistoricalOrders=function(reset){
+    if(reset)historyPageIndex=1;updateHistoryStats();const filtered=currentFiltered(),pages=Math.max(1,Math.ceil(filtered.length/PAGE_SIZE));historyPageIndex=Math.min(Math.max(1,historyPageIndex),pages);const start=(historyPageIndex-1)*PAGE_SIZE,visible=filtered.slice(start,start+PAGE_SIZE);
+    const rows=document.getElementById('historyRows');if(rows)rows.innerHTML=visible.map(row=>`<tr class="history-clickable" tabindex="0" role="button" aria-label="Deschide comanda ${hEsc(row.code)}" onclick="showHistoricalOrderDetails('${hEsc(row.id)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showHistoricalOrderDetails('${hEsc(row.id)}')}"><td><span class="history-code">${hEsc(row.code)}</span>${row.duplicate?'<span class="history-issue">Cod repetat</span>':row.atypical?'<span class="history-issue">Cod atipic</span>':''}</td><td>${hEsc(row.center)}</td><td>${hEsc(row.client)}</td><td class="history-product">${hEsc(row.product)}${row.notes?`<small>${hEsc(row.notes)}</small>`:''}</td><td>${hEsc(row.patient||'')}</td><td><span class="history-status">Arhivată</span></td></tr>`).join('');
+    const scopedCount=historyScopedOrders().length,empty=document.getElementById('historyEmpty'),table=document.getElementById('historyTableWrap'),footer=document.getElementById('historyFooter');if(empty)empty.classList.toggle('hide',scopedCount>0);if(table)table.classList.toggle('hide',scopedCount===0);if(footer)footer.classList.toggle('hide',scopedCount===0);
+    const count=document.getElementById('historyFilterCount');if(count)count.textContent=filtered.length.toLocaleString('ro-RO');const range=document.getElementById('historyRange');if(range)range.textContent=filtered.length?`Afișate ${start+1}–${Math.min(start+PAGE_SIZE,filtered.length)} din ${filtered.length.toLocaleString('ro-RO')}`:'Nicio comandă găsită';const page=document.getElementById('historyPageNumber');if(page)page.textContent=historyPageIndex+' / '+pages
+  };
+  window.changeHistoryPage=function(delta){historyPageIndex+=Number(delta)||0;renderHistoricalOrders(false);document.getElementById('historyPage')?.scrollIntoView({behavior:'smooth',block:'start'})};
+  window.openHistoricalOrders=function(btn){showPage('historyPage',btn||document.getElementById('menuHistory'));const title=document.getElementById('pageTitle');if(title)title.textContent='Istoric comenzi';renderHistoricalOrders(false)};
+  function loadXlsxLibrary(){return new Promise((resolve,reject)=>{if(window.XLSX)return resolve(window.XLSX);const script=document.createElement('script');script.src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';script.onload=()=>resolve(window.XLSX);script.onerror=()=>reject(new Error('Biblioteca Excel nu a putut fi încărcată.'));document.head.appendChild(script)})}
+  window.importHistoricalOrders=async function(input){
+    const file=input?.files?.[0];if(!file)return;
+    try{
+      const XLSX=await loadXlsxLibrary(),buffer=await file.arrayBuffer(),book=XLSX.read(buffer,{type:'array'}),sheet=book.Sheets[book.SheetNames[0]],raw=XLSX.utils.sheet_to_json(sheet,{defval:'',raw:false});
+      if(!raw.length)throw new Error('Fișierul nu conține comenzi.');
+      let rows=raw.map((item,index)=>({id:'HIST_'+Date.now()+'_'+index,code:normalizedCode(item.Cod??item.COD??item.Cod_RX),center:String(item.Centru??''),client:String(item.Client??''),product:String(item.Produs??''),od:String(item.OD??''),os:String(item.OS??''),add:String(item.ADD??''),patient:String(item['Nume Pacient']??item.Pacient??''),notes:String(item['Mentiuni/Observatii']??item['Mențiuni/Observații']??item.Mentiuni??'')})).filter(row=>row.code||row.client||row.product);
+      rows=enrichDates(rows);const confirmImport=()=>{historicalOrders=rows;window.historicalOrders=rows;localStorage.setItem(HISTORY_KEY,JSON.stringify(rows));renderHistoricalOrders(true);input.value=''};
+      if(typeof showAppConfirm==='function')showAppConfirm({title:'Import comenzi istorice',text:`Au fost identificate ${rows.length.toLocaleString('ro-RO')} comenzi. Importul înlocuiește istoricul existent și nu afectează comenzile active sau contorul global.`,confirmText:'Importă',cancelText:'Anulează',onConfirm:confirmImport});else if(confirm('Importi '+rows.length+' comenzi istorice?'))confirmImport()
+    }catch(error){input.value='';if(typeof showAppConfirm==='function')showAppConfirm({title:'Import nereușit',text:error?.message||'Fișierul nu a putut fi citit.',confirmText:'OK',cancelText:'Închide'});else alert(error?.message||'Fișierul nu a putut fi citit.')}
+  };
+  window.showHistoricalOrderDetails=function(id){
+    const row=historyScopedOrders().find(x=>String(x.id)===String(id));if(!row)return;
+    document.querySelector('.history-order-modal')?.remove();
+    const lines=[['Centru',row.center||'Nedisponibil'],['Client',row.client||'Nedisponibil'],['Produs original',row.product||'Nedisponibil'],['OD',row.od||'Nedisponibil'],['OS',row.os||'Nedisponibil'],['ADD',row.add||'Nedisponibil'],['Nume pacient',row.patient||'Nedisponibil'],['Mențiuni',row.notes||'Fără mențiuni'],['Status','Arhivată'],['Sursă','Import sistem anterior']];
+    const modal=document.createElement('div');modal.className='modal open history-order-modal';modal.innerHTML=`<div class="wizard" style="max-width:720px"><div class="top"><div><div class="muted">Detalii comandă istorică</div><div class="order-code-head"><div class="step-title">${hEsc(row.code)}</div><button class="icon-btn primary order-code-copy" type="button" title="Copiază codul"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button></div></div><button class="btn ghost history-modal-close" type="button">Închide</button></div><div class="detail-grid">${lines.map(([label,value])=>`<div class="muted">${hEsc(label)}</div><div><b>${hEsc(value)}</b></div>`).join('')}</div></div>`;
+    document.body.appendChild(modal);modal.querySelector('.history-modal-close').onclick=()=>modal.remove();modal.querySelector('.order-code-copy').onclick=()=>navigator.clipboard&&navigator.clipboard.writeText(String(row.code||''));modal.addEventListener('mousedown',event=>{if(event.target===modal)modal.remove()})
+  };
+  const previousShowPage=window.showPage;
+  window.showPage=function(id,btn){const result=previousShowPage.apply(this,arguments);const history=id==='historyPage';if(history){document.getElementById('menuHistory')?.classList.add('active');const title=document.getElementById('pageTitle');if(title)title.textContent='Istoric comenzi';renderHistoricalOrders(false)}return result};
+  document.addEventListener('DOMContentLoaded',()=>renderHistoricalOrders(false));
+})();
+</script>
+<style>
+#dashboard .dashboard-stats .stat-btn{cursor:pointer!important;transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease!important}
+#dashboard .dashboard-stats .stat-btn:hover{transform:translateY(-2px)!important;border-color:#b7ccff!important}
+#dashboard .dashboard-stats .stat-btn.dashboard-filter-active{border-color:#165dff!important;box-shadow:0 18px 44px rgba(22,93,255,.15)!important}
+#dashboard .dashboard-stats .stat-btn.dashboard-filter-active .muted,
+#dashboard .dashboard-stats .stat-btn.dashboard-filter-active .kpi{color:#165dff!important}
+</style>
+<script>
+(function(){
+  function dashboardCardMode(card){const match=String(card?.getAttribute('onclick')||'').match(/showOrdersList\(['"]([^'"]+)['"]\)/);return match?match[1]:'all'}
+  function currentDashboardMode(){try{return String(orderViewMode||'all')}catch(_){return'all'}}
+  window.updateDashboardFilterCards=function(mode){
+    const selected=String(mode||currentDashboardMode()||'all');
+    document.querySelectorAll('#dashboard .dashboard-stats .stat-btn').forEach(card=>{
+      const active=dashboardCardMode(card)===selected;
+      card.classList.toggle('dashboard-filter-active',active);
+      card.setAttribute('aria-pressed',String(active))
+    })
+  };
+  const previousShowOrdersList=window.showOrdersList;
+  if(typeof previousShowOrdersList==='function')window.showOrdersList=function(mode){const result=previousShowOrdersList.apply(this,arguments);updateDashboardFilterCards(mode||'all');return result};
+  const previousShowPage=window.showPage;
+  if(typeof previousShowPage==='function')window.showPage=function(id,button){const result=previousShowPage.apply(this,arguments);if(id==='dashboard')setTimeout(()=>updateDashboardFilterCards(),0);return result};
+  const previousRender=window.render;
+  if(typeof previousRender==='function')window.render=function(){const result=previousRender.apply(this,arguments);updateDashboardFilterCards();return result};
+  document.addEventListener('DOMContentLoaded',()=>setTimeout(()=>updateDashboardFilterCards('all'),0));
 })();
 </script>
 </body>
