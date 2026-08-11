@@ -4706,6 +4706,18 @@ cursor:pointer;
   function applyShared(data){
     applyingRemote=true;
     try{
+      if(Array.isArray(data.deletedOrdersHistory)){
+        const merged=new Map((Array.isArray(deletedOrders)?deletedOrders:[]).map(item=>[
+          String(item.orderId||item.order?.id||''),item
+        ]));
+        data.deletedOrdersHistory.forEach(item=>{
+          const orderId=String(item?.orderId||item?.order?.id||'');
+          if(orderId&&item?.order)merged.set(orderId,{...(merged.get(orderId)||{}),...item,orderId});
+        });
+        deletedOrders=[...merged.values()].filter(item=>item?.order);
+        originalSetItem('sphera_deleted_orders_history',JSON.stringify(deletedOrders));
+        if(typeof renderDeletedOrders==='function')renderDeletedOrders();
+      }
       if(Array.isArray(data.clients)){
         USER_CLIENTS=data.clients.map(c=>({...c}));
         localStorage.setItem('sphera_user_clients',JSON.stringify(USER_CLIENTS));
@@ -4742,6 +4754,35 @@ cursor:pointer;
     const clean=JSON.parse(JSON.stringify(order||{}));
     if(!clean.id)clean.id='ord_'+Date.now()+'_'+Math.random().toString(36).slice(2,9);
     return clean;
+  }
+  function sharedDeletedHistoryEntry(order,details={}){
+    if(!order)return null;
+    return {
+      orderId:String(order.id||''),
+      order:cleanOrderForCloud(order),
+      deletedAt:details.deletedAt||new Date().toISOString(),
+      deletedBy:details.deletedBy||currentUser?.name||currentUser?.username||'Utilizator',
+      deletedByUid:details.deletedByUid||auth.currentUser?.uid||''
+    };
+  }
+  async function saveSharedDeletedHistory(order,details={}){
+    const entry=sharedDeletedHistoryEntry(order,details);
+    if(!entry?.orderId)return;
+    await db.runTransaction(async transaction=>{
+      const snapshot=await transaction.get(SHARED_REF);
+      const list=Array.isArray(snapshot.data()?.deletedOrdersHistory)?snapshot.data().deletedOrdersHistory:[];
+      const next=[entry,...list.filter(item=>String(item?.orderId||item?.order?.id||'')!==entry.orderId)].slice(0,300);
+      transaction.set(SHARED_REF,{deletedOrdersHistory:next},{merge:true});
+    });
+  }
+  async function removeSharedDeletedHistory(orderId){
+    const id=String(orderId||'');
+    if(!id)return;
+    await db.runTransaction(async transaction=>{
+      const snapshot=await transaction.get(SHARED_REF);
+      const list=Array.isArray(snapshot.data()?.deletedOrdersHistory)?snapshot.data().deletedOrdersHistory:[];
+      transaction.set(SHARED_REF,{deletedOrdersHistory:list.filter(item=>String(item?.orderId||item?.order?.id||'')!==id)},{merge:true});
+    });
   }
   function orderDocId(order){
     return encodeURIComponent(String(order?.id||'')).replace(/%/g,'_').slice(0,900);
@@ -4822,6 +4863,10 @@ cursor:pointer;
       }
       flush();
       await Promise.all(commits);
+      for(const id of deletedIds){
+        const deletedOrder=lastLocalOrdersById.get(String(id));
+        if(deletedOrder)await saveSharedDeletedHistory(deletedOrder);
+      }
       await ORDERS_STATE_REF.set({
         initialized:true,
         updatedAt:firebase.firestore.FieldValue.serverTimestamp()
@@ -4881,18 +4926,23 @@ cursor:pointer;
       const localArchive=new Map((Array.isArray(deletedOrders)?deletedOrders:[]).map(item=>[
         String(item.orderId||item.order?.id||''),item
       ]));
-      deletedOrders=snap.docs.map(doc=>{
+      snap.docs.forEach(doc=>{
         const item=doc.data()||{};
         const orderId=String(item.orderId||item.order?.id||'');
         const localItem=localArchive.get(orderId)||{};
-        return {
+        if(!item.order){
+          if(orderId)localArchive.delete(orderId);
+          return;
+        }
+        localArchive.set(orderId,{
           ...localItem,
           ...item,
           orderId,
           order:item.order||localItem.order||null,
           deletedBy:item.deletedByName||item.deletedBy||localItem.deletedBy||'Utilizator'
-        };
-      }).filter(item=>item.order);
+        });
+      });
+      deletedOrders=[...localArchive.values()].filter(item=>item?.order);
       originalSetItem('sphera_deleted_orders_history',JSON.stringify(deletedOrders));
       deletedOrderIds=new Set(
         snap.docs.map(doc=>String(doc.data()?.orderId||'')).filter(Boolean)
@@ -4957,6 +5007,10 @@ cursor:pointer;
         updatedAt:firebase.firestore.FieldValue.serverTimestamp()
       },{merge:true});
       await batch.commit();
+      if(deletedOrder)await saveSharedDeletedHistory(deletedOrder,{
+        deletedBy:currentUser?.name||currentUser?.username||'Utilizator',
+        deletedByUid:auth.currentUser.uid
+      });
       setCloudStatus('Cloud: comanda a fost ștearsă definitiv','ok');
       return true;
     }catch(error){
@@ -5000,6 +5054,7 @@ cursor:pointer;
         updatedAt:firebase.firestore.FieldValue.serverTimestamp()
       },{merge:true});
       await batch.commit();
+      await removeSharedDeletedHistory(id);
       deletedOrderIds.delete(id);
       deletedOrders=deletedOrders.filter(item=>String(item.orderId||item.order?.id||'')!==id);
       if(!orders.some(order=>String(order.id)===id))orders.unshift(restoredOrder);
@@ -5033,6 +5088,7 @@ cursor:pointer;
         historyClearedAt:firebase.firestore.FieldValue.serverTimestamp(),
         historyClearedBy:auth.currentUser.uid
       },{merge:true});
+      await removeSharedDeletedHistory(id);
       deletedOrders=deletedOrders.filter(item=>String(item.orderId||item.order?.id||'')!==id);
       originalSetItem('sphera_deleted_orders_history',JSON.stringify(deletedOrders));
       if(typeof renderDeletedOrders==='function')renderDeletedOrders();
@@ -5071,6 +5127,7 @@ cursor:pointer;
       });
       flush();
       await Promise.all(commits);
+      await SHARED_REF.set({deletedOrdersHistory:[]},{merge:true});
       deletedOrders=[];
       originalSetItem('sphera_deleted_orders_history','[]');
       if(typeof renderDeletedOrders==='function')renderDeletedOrders();
