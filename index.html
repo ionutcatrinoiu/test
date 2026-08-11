@@ -2573,7 +2573,7 @@ function render(){
  kToday.textContent=scoped.filter(o=>o.date===new Date().toISOString().slice(0,10)).length;
  const ko=document.getElementById('kOpen'); if(ko) ko.textContent=scoped.filter(o=>o.status!=='Livrată').length;
  const kd=document.getElementById('kDelivered'); if(kd) kd.textContent=scoped.filter(o=>o.status==='Livrată').length;
- const kdelay=document.getElementById('kDelayed'); if(kdelay) kdelay.textContent=scoped.filter(isDelayedOrder).length; const ktransit=document.getElementById('kTransit'); if(ktransit) ktransit.textContent=scoped.filter(o=>workflowIndex(o)===WORKFLOW_STEPS.indexOf('Check-out')).length;
+ const kdelay=document.getElementById('kDelayed'); if(kdelay) kdelay.textContent=scoped.filter(isDelayedOrder).length; const ktransit=document.getElementById('kTransit'); if(ktransit) ktransit.textContent=scoped.filter(o=>{if(currentUser?.role!=='partner')return workflowIndex(o)===WORKFLOW_STEPS.indexOf('Check-out');const flow=typeof orderWorkflowSteps==='function'?orderWorkflowSteps(o):WORKFLOW_STEPS;const pos=typeof orderWorkflowIndex==='function'?orderWorkflowIndex(o):workflowIndex(o);return pos===flow.length-2}).length;
  const rawQuery=String(document.getElementById('q')?.value||'').trim();
  const queryVariants=rxQueryVariants(rawQuery);
  const isPlainCodeQuery=/^\d+$/.test(rawQuery);
@@ -2587,7 +2587,7 @@ function render(){
    if(orderViewMode==='today') ok=o.date===new Date().toISOString().slice(0,10);
    if(orderViewMode==='open') ok=o.status!=='Livrată';
    if(orderViewMode==='delivered') ok=o.status==='Livrată';
-   if(orderViewMode==='delayed') ok=isDelayedOrder(o); if(orderViewMode==='transit') ok=typeof window.isPartnerTransitOrder==='function'?window.isPartnerTransitOrder(o):workflowIndex(o)===WORKFLOW_STEPS.indexOf('Check-out');
+   if(orderViewMode==='delayed') ok=isDelayedOrder(o); if(orderViewMode==='transit'){if(currentUser?.role==='partner'){const flow=typeof orderWorkflowSteps==='function'?orderWorkflowSteps(o):WORKFLOW_STEPS;const pos=typeof orderWorkflowIndex==='function'?orderWorkflowIndex(o):workflowIndex(o);ok=pos===flow.length-2}else ok=workflowIndex(o)===WORKFLOW_STEPS.indexOf('Check-out')}
    const values=[processingCenterLabel(o),o.code,o.client.name,o.patient,productSummary(o),odText(o),osText(o),addText(o),o?.rx?.odSph,o?.rx?.odCyl,o?.rx?.odAx,o?.rx?.odAdd,o?.rx?.osSph,o?.rx?.osCyl,o?.rx?.osAx,o?.rx?.osAdd];
    const haystack=norm(values.join(' '));
    const rxAliases=values.flatMap(v=>rxQueryVariants(v)).join(' ');
@@ -4398,6 +4398,16 @@ cursor:pointer;
     if (to !== from + 1) return false;
     if (typeof isAdmin === 'function' && isAdmin()) return true;
 
+    if (currentUser.role === 'partner') {
+      const username = String(currentUser.username || '').trim().toLowerCase();
+      const account = (USERS || []).find(user => String(user.username || '').trim().toLowerCase() === username) || currentUser;
+      const creator = [order.createdByUsername, order.creatorUsername, order.createdByAccount]
+        .some(value => String(value || '').trim().toLowerCase() === username);
+      const sameClient = String(order.client?.code || '').trim() === String(account.clientCode || '').trim();
+      const ownOrder = creator || sameClient;
+      return ownOrder && to === steps.length - 1 && from === steps.length - 2;
+    }
+
     if (isMaster()) {
       if (norm(order.center) === 'iasi') return true;
       return status === 'Check-out' && from === 0;
@@ -4506,7 +4516,11 @@ cursor:pointer;
         : '';
 
       let message = '';
-      if (isMaster() && norm(order.center) !== 'iasi') {
+      if (currentUser?.role === 'partner') {
+        message = index === steps.length - 2
+          ? '<div class="workflow-readonly">Comanda este în drum spre tine. O poți marca drept Livrată.</div>'
+          : '<div class="workflow-readonly">Poți modifica doar statusul final Livrată.</div>';
+      } else if (isMaster() && norm(order.center) !== 'iasi') {
         message = index === 0
           ? '<div class="workflow-readonly">Poți confirma doar etapa Check-out pentru comenzile din afara centrului Iași.</div>'
           : '<div class="workflow-readonly">Etapele următoare sunt gestionate de operatorii centrului respectiv.</div>';
