@@ -10904,6 +10904,9 @@ body.partner-account #recentClientsBox{display:none!important}
   document.addEventListener('DOMContentLoaded',()=>setTimeout(()=>updateDashboardFilterCards('all'),0));
 })();
 </script>
+
+
+
 </body>
 </html>
 
@@ -11047,5 +11050,142 @@ body.partner-account #recentClientsBox{display:none!important}
   document.addEventListener('DOMContentLoaded',sync);window.addEventListener('load',sync);window.addEventListener('resize',sync);
   const observer=new MutationObserver(m=>{if(m.some(x=>x.target?.closest?.('#orderRows,#deletedOrderRows')||x.target?.id==='orderRows'||x.target?.id==='deletedOrderRows'))sync()});
   observer.observe(document.documentElement,{childList:true,subtree:true});sync();
+})();
+</script>
+
+<style id="sphera-mobile-requested-optimizations-v2">
+@media screen and (max-width:760px){
+  /* Modalele rămân între header și zona inferioară a ecranului */
+  .modal{z-index:9999!important;align-items:center!important;padding:calc(env(safe-area-inset-top) + 88px) 12px calc(env(safe-area-inset-bottom) + 82px)!important;overflow:hidden!important}
+  .modal>.wizard{width:100%!important;max-width:calc(100vw - 24px)!important;max-height:calc(100dvh - 190px - env(safe-area-inset-top) - env(safe-area-inset-bottom))!important;margin:0!important;overflow-y:auto!important;overscroll-behavior:contain!important;border-radius:22px!important;padding:18px 16px!important}
+  .modal .step-title{font-size:25px!important}.modal .progress{margin:13px 0 16px!important}
+  .modal .icon-btns,.modal .nav-circles{position:sticky!important;bottom:0!important;background:linear-gradient(to top,#fff 72%,rgba(255,255,255,0))!important;padding-top:14px!important;padding-bottom:2px!important;z-index:4!important}
+
+  /* Pasul 3, prescripție clară pe mobil */
+  .modal .rx-grid.has-add,.modal .rx-grid.no-add{grid-template-columns:38px repeat(3,minmax(0,1fr)) 38px!important;gap:7px!important;max-width:none!important}
+  .modal .rx-grid.has-add .rx-add-head,.modal .rx-grid.has-add .rx-add-field{grid-column:auto!important}
+  .modal .rx-grid.has-add{grid-template-columns:38px repeat(4,minmax(0,1fr)) 38px!important}
+  .modal .rx-grid .rx-head{font-size:10px!important;text-align:center!important;white-space:nowrap!important}
+  .modal .rx-grid .rx-field{min-width:0!important;height:46px!important;padding:8px 5px!important;text-align:center!important;font-size:15px!important;border-radius:12px!important}
+  .modal .rx-grid .eye-line{font-size:12px!important}.modal .rx-grid .icon-btn{width:36px!important;min-width:36px!important;height:36px!important}
+  .modal .prism-toggle-row{margin:12px 0 8px!important}.modal .prism-checkbox{font-size:14px!important}
+
+  /* Grupurile au carduri colorate, fără a schimba logica de grupare */
+  .mobile-rx-card.mobile-grouped{background:#f3ffe6!important;border-color:#cfe8a9!important;border-left:1px solid #cfe8a9!important;box-shadow:0 5px 16px rgba(80,120,25,.08)!important}
+  .mobile-rx-card.mobile-group-start{margin-bottom:4px!important;border-radius:18px!important}
+  .mobile-rx-card.mobile-group-end{border-radius:18px!important}
+  .mobile-rx-card.mobile-group-start:after{display:none!important}
+  .mobile-rx-notes{display:block!important;margin-top:0!important;padding-top:10px!important;border-top:1px solid #e4e7ec!important;color:#101828!important}
+  .mobile-rx-notes .mobile-rx-label{display:inline!important;margin:0 5px 0 0!important}
+  .mobile-rx-notes span:last-child{display:inline!important;font-weight:700!important}
+
+  /* Clienți, butonul sus dreapta și carduri mobile */
+  #clientsPage{position:relative!important;padding-top:0!important}
+  #clientsPage>.card:first-of-type{margin-top:0!important}
+  #clientsPage .clients-filter-row{display:grid!important;grid-template-columns:minmax(0,1fr) 48px!important;gap:10px!important}
+  #clientsPage .clients-filter-row input{height:48px!important}
+  #clientsPage .clients-filter-row .count-dot{width:48px!important;height:48px!important;display:flex!important;align-items:center!important;justify-content:center!important}
+  #clientsPage>.card:nth-of-type(2)>.table-wrap{display:none!important}
+  .mobile-client-cards{display:grid!important;gap:12px!important;margin-top:16px!important}
+  .mobile-client-card{position:relative!important;background:#fff!important;border:1px solid #dce4ee!important;border-radius:18px!important;padding:16px 58px 16px 16px!important;box-shadow:0 4px 14px rgba(16,24,40,.035)!important}
+  .mobile-client-card .client-name{font-size:15px!important;font-weight:800!important;line-height:1.3!important;margin-bottom:14px!important}
+  .mobile-client-grid{display:grid!important;grid-template-columns:1fr 1fr!important;gap:14px 18px!important}.mobile-client-grid .full{grid-column:1/-1!important}
+  .mobile-client-label{display:block!important;color:#667085!important;font-size:9.5px!important;font-weight:900!important;text-transform:uppercase!important;margin-bottom:4px!important}
+  .mobile-client-value{font-size:13.5px!important;font-weight:700!important;overflow-wrap:anywhere!important}
+  .mobile-client-delete{position:absolute!important;right:14px!important;top:14px!important}
+  #clientsPage .mobile-add-client-btn{position:absolute!important;right:0!important;top:-62px!important;width:auto!important;min-width:132px!important;height:42px!important;padding:0 16px!important;border-radius:14px!important}
+
+  /* Status, același limbaj vizual ca RX, statusul rămâne integrat jos */
+  #processingOrdersList{display:grid!important;gap:12px!important}
+  #processingOrdersList .workflow-order{overflow:hidden!important;padding:15px 14px 0!important;border-radius:18px!important;box-shadow:0 4px 14px rgba(16,24,40,.035)!important}
+  #processingOrdersList .workflow-head{display:grid!important;grid-template-columns:1fr 1fr!important;gap:12px!important;padding-bottom:12px!important}
+  #processingOrdersList .workflow-head>div:first-child{grid-column:1/-1!important;padding-right:80px!important}
+  #processingOrdersList .workflow-label{font-size:9.5px!important;font-weight:900!important;text-transform:uppercase!important;color:#667085!important}
+  #processingOrdersList .workflow-value{font-size:13.5px!important;font-weight:800!important;line-height:1.3!important}
+  #processingOrdersList .workflow-rx-code{font-size:18px!important}
+  #processingOrdersList .workflow-track{min-width:0!important;width:calc(100% + 28px)!important;margin-left:-14px!important;margin-top:2px!important;padding:13px 10px 10px!important;background:#f8fafc!important;border-top:1px solid #e4e7ec!important;grid-template-columns:repeat(var(--mobile-step-count,6),minmax(0,1fr))!important}
+  #processingOrdersList .workflow-track:before{left:7%!important;right:7%!important;top:27px!important;height:3px!important}
+  #processingOrdersList .workflow-progress{top:27px!important;height:3px!important}
+  #processingOrdersList .workflow-step{min-width:0!important;font-size:8px!important;gap:5px!important;padding:0 1px!important}
+  #processingOrdersList .workflow-dot{width:24px!important;height:24px!important;min-width:24px!important;font-size:10px!important}
+  #processingOrdersList .workflow-readonly{margin:0 -14px!important;padding:8px 14px 12px!important;border-radius:0!important;font-size:10px!important;background:#f8fafc!important}
+}
+@media screen and (min-width:761px){.mobile-client-cards{display:none!important}}
+</style>
+<script id="sphera-mobile-requested-optimizations-runtime-v2">
+(function(){
+ const mobile=()=>window.matchMedia('(max-width:760px)').matches;
+ const escM=v=>String(v??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+ /* Pe iPhone nu refocalizăm selectul după alegere, altfel lista se redeschide. */
+ const oldRedraw=window.redrawStepKeepingFocus;
+ window.redrawStepKeepingFocus=function(id){
+   if(mobile()){ drawStep(false); return; }
+   return oldRedraw?oldRedraw.apply(this,arguments):drawStep(false);
+ };
+
+ function tuneWizard(){
+   if(!mobile()||!document.querySelector('.modal.open'))return;
+   /* SPH/CYL primesc tastatură cu acces la minus. */
+   if(typeof step!=='undefined'&&step===2){
+     document.querySelectorAll('.modal.open .rx-field:not(.rx-axis-field):not(.rx-add-field)').forEach(el=>{el.setAttribute('inputmode','text');el.setAttribute('autocomplete','off')});
+   }
+   /* Pasul 5: pe mobil afișăm centrele într-un select real. */
+   if(typeof step!=='undefined'&&step===4&&draft?.hasMount===true){
+     const old=document.getElementById('mountInput');
+     if(old&&old.tagName==='INPUT'){
+       const centers=(typeof orderedProcessingCenters==='function'?orderedProcessingCenters():[]).filter(c=>!['craiova','oradea'].includes(norm(c)));
+       const sel=document.createElement('select');sel.id='mountInput';
+       sel.innerHTML=centers.map(c=>`<option value="${escM(c)}" ${norm(c)===norm(draft.mount)?'selected':''}>${escM(c)}</option>`).join('');
+       sel.onchange=function(){draft.mount=this.value}; old.replaceWith(sel); if(!draft.mount&&centers[0]){draft.mount=centers[0];sel.value=centers[0]}
+     }
+   }
+   /* Pasul 6: centrele de livrare sunt listate explicit, plus clientul. */
+   if(typeof step!=='undefined'&&step===5){
+     const sel=document.getElementById('deliveryDestinationSelect');
+     if(sel&&!sel.dataset.mobileCenters){
+       const centers=typeof orderedProcessingCenters==='function'?orderedProcessingCenters():[];
+       const current=String(draft.deliveryDestination||'center');
+       const selectedCenter=String(draft.deliveryCenter||draft.center||currentUser?.center||centers[0]||'');
+       sel.innerHTML=centers.map(c=>`<option value="center:${escM(c)}" ${current!=='client'&&norm(c)===norm(selectedCenter)?'selected':''}>${escM(c)}</option>`).join('')+`<option value="client" ${current==='client'?'selected':''}>La client · ${escM(draft.client?.name||'Client')}</option>`;
+       sel.dataset.mobileCenters='1';
+       sel.onchange=function(){const v=this.value;draft.deliveryDestination=v==='client'?'client':v;draft.deliveryCenter=v.startsWith('center:')?v.slice(7):''};
+       if(current!=='client'&&!current.startsWith('center:')&&selectedCenter){draft.deliveryDestination='center:'+selectedCenter;draft.deliveryCenter=selectedCenter}
+     }
+   }
+ }
+
+ function clientCards(){
+   if(!mobile())return;
+   const page=document.getElementById('clientsPage'),body=document.getElementById('clientRows');if(!page||!body)return;
+   let host=page.querySelector('.mobile-client-cards');if(!host){host=document.createElement('div');host.className='mobile-client-cards';page.appendChild(host)}
+   const rows=[...body.rows].filter(r=>!r.cells[0]?.hasAttribute('colspan'));
+   host.innerHTML=rows.map((r,i)=>{
+     const vals=[...r.cells].map(td=>td.querySelector('input')?.value||td.textContent.trim());
+     const hasCui=r.querySelector('.client-cui-cell');
+     const name=vals[0]||'',city=vals[1]||'',cui=hasCui?(hasCui.querySelector('input')?.value||''):'';
+     const code=hasCui?(r.cells[3]?.querySelector('input')?.value||r.cells[3]?.textContent.trim()):(r.cells[2]?.querySelector('input')?.value||r.cells[2]?.textContent.trim());
+     const del=r.querySelector('button[onclick^="deleteClient"],button[title="Șterge client"]');
+     return `<article class="mobile-client-card" data-client-row="${i}"><span class="mobile-client-label">Client</span><div class="client-name">${escM(name)}</div><div class="mobile-client-grid"><div><span class="mobile-client-label">Localitate</span><div class="mobile-client-value">${escM(city||'–')}</div></div><div><span class="mobile-client-label">CUI</span><div class="mobile-client-value">${escM(cui||'CUI')}</div></div><div class="full"><span class="mobile-client-label">Cod</span><div class="mobile-client-value">${escM(code||'–')}</div></div></div>${del?`<div class="mobile-client-delete">${del.outerHTML}</div>`:''}</article>`;
+   }).join('')||'<div class="mobile-rx-empty">Nu există clienți.</div>';
+   host.querySelectorAll('.mobile-client-card').forEach((card,i)=>{const src=rows[i];card.querySelectorAll('button').forEach((b,j)=>{const sb=src.querySelectorAll('button')[j];if(sb)b.onclick=e=>{e.stopPropagation();sb.click()}})});
+
+   const addSource=[...document.querySelectorAll('button')].find(b=>/adaugă client/i.test(b.textContent||'')&&b.offsetParent!==null&&!b.closest('#clientsPage'));
+   let add=page.querySelector('.mobile-add-client-btn');
+   if(addSource&&!add){add=document.createElement('button');add.className='btn primary mobile-add-client-btn';add.textContent='Adaugă client';add.onclick=()=>addSource.click();page.prepend(add)}
+ }
+
+ function statusMobile(){
+   if(!mobile())return;
+   document.querySelectorAll('#processingOrdersList .workflow-order').forEach(card=>{
+     const track=card.querySelector('.workflow-track');if(track){const n=track.querySelectorAll('.workflow-step').length||6;track.style.setProperty('--mobile-step-count',n)}
+   });
+ }
+
+ function sync(){tuneWizard();clientCards();statusMobile()}
+ const obs=new MutationObserver(()=>requestAnimationFrame(sync));obs.observe(document.body,{childList:true,subtree:true});
+ window.addEventListener('resize',sync);document.addEventListener('DOMContentLoaded',sync);setTimeout(sync,300);
+ const oldRenderClients=window.renderClients;window.renderClients=function(){const r=oldRenderClients&&oldRenderClients.apply(this,arguments);setTimeout(clientCards,0);return r};
+ const oldStatus=window.SPHERA_renderStatusOrders;window.SPHERA_renderStatusOrders=function(){const r=oldStatus&&oldStatus.apply(this,arguments);setTimeout(statusMobile,0);return r};
 })();
 </script>
