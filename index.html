@@ -11088,6 +11088,33 @@ body.partner-account #recentClientsBox{display:none!important}
   #clientsPage>.card:first-of-type{margin-top:0!important;}
 }
 </style>
+
+<style id="sphera-mobile-v11-clients-exact-dashboard-action">
+@media (max-width:900px){
+  body:has(#clientsPage:not(.hide)) #clientsPage .mobile-add-client-btn{display:none!important;}
+  body:has(#clientsPage:not(.hide)) #newOrderBtn{display:none!important;}
+  body:has(#clientsPage:not(.hide)) #newClientBtn{display:flex!important;grid-column:2!important;width:100%!important;min-height:42px!important;height:auto!important;margin:0!important;padding:9px 10px!important;border-radius:13px!important;font-size:13px!important;}
+  body:has(#clientsPage:not(.hide)) .top-actions{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;width:100%!important;}
+  body:has(#clientsPage:not(.hide)) .logout-account-wrap{display:none!important;}
+  #clientsPage{padding-top:0!important;}
+}
+</style>
+<script id="sphera-mobile-v11-clients-exact-dashboard-action-js">
+(()=>{
+ const mobile=()=>matchMedia('(max-width:900px)').matches;
+ function fix(){
+   if(!mobile()) return;
+   const page=document.getElementById('clientsPage');
+   if(!page || page.classList.contains('hide')) return;
+   page.querySelectorAll('.mobile-add-client-btn').forEach(b=>b.remove());
+ }
+ document.addEventListener('click',()=>setTimeout(fix,0),true);
+ const mo=new MutationObserver(()=>fix());
+ mo.observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:['class']});
+ addEventListener('resize',fix,{passive:true});
+ setTimeout(fix,0);
+})();
+</script>
 </body>
 </html>
 
