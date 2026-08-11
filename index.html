@@ -10163,6 +10163,7 @@ body.partner-account #menuNomenclators,
 body.partner-account #menuSettings,
 body.partner-account #newClientBtn,
 body.partner-account #recentClientsBox,
+body.partner-account #dashboardClientsCard,
 body.partner-account #deletedOrdersCard{display:none!important}
 body.partner-account #recentClientsBox{display:none!important}
 .partner-optic-line{margin-top:7px;color:#344054;font-size:15px;font-weight:700}
@@ -10298,7 +10299,7 @@ body.partner-account #recentClientsBox{display:none!important}
     if(statusMenu)statusMenu.style.setProperty('display',partner?'flex':'','important');
     const badge=document.getElementById('accountBadge');
     if(partner&&badge){badge.textContent='Partener';badge.classList.remove('hide')}
-    const recent=document.getElementById('recentClientsBox')?.closest('.card');
+    const recent=document.getElementById('dashboardClientsCard');
     if(recent)recent.style.setProperty('display',partner?'none':'','important');
     const who=document.getElementById('who');
     if(partner&&who){
