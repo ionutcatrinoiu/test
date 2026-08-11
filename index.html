@@ -4633,6 +4633,7 @@ cursor:pointer;
     if(r==='admin'||r==='administrator')return 'admin';
     if(r==='iasi'||r==='operator-master'||r==='operator master'||r==='master')return 'iasi';
     if(r==='viewer'||r==='operator export'||r==='operator-export'||r==='export')return 'viewer';
+    if(r==='partner'||r==='partener')return 'partner';
     return 'operator';
   }
   async function findProfile(user,username){
@@ -4654,6 +4655,9 @@ cursor:pointer;
       role:normalizeRole(profile?.role),
       center:profile?.center||profile?.centru||'',
       warehouses:Array.isArray(profile?.warehouses)?profile.warehouses:[],
+      clientId:profile?.clientId||profile?.client_id||'',
+      clientCode:String(profile?.clientCode||profile?.client_code||''),
+      clientName:profile?.clientName||profile?.client_name||'',
       operatorCode:String(profile?.operatorCode||profile?.code||'00').padStart(2,'0'),
       active:profile?.active!==false
     };
@@ -5107,6 +5111,9 @@ cursor:pointer;
           role:normalizeRole(x.role||localUser?.role),
           center:x.center||x.centru||localUser?.center||'',
           warehouses:Array.isArray(x.warehouses)?x.warehouses:(Array.isArray(localUser?.warehouses)?localUser.warehouses:[]),
+          clientId:x.clientId||x.client_id||localUser?.clientId||'',
+          clientCode:String(x.clientCode||x.client_code||localUser?.clientCode||''),
+          clientName:x.clientName||x.client_name||localUser?.clientName||'',
           operatorCode:String(x.operatorCode||x.code||localUser?.operatorCode||'00').padStart(2,'0'),
           active:x.active!==false,
           email:x.email||'',
@@ -10132,6 +10139,236 @@ html>.sphera-edit-popup.modal.open>.wizard{
       loaderActive=false;
     }
   };
+})();
+</script>
+<style id="sphera-partner-role-style">
+body.partner-account #menuProcessing,
+body.partner-account #menuClients,
+body.partner-account #menuNomenclators,
+body.partner-account #menuSettings,
+body.partner-account #newClientBtn,
+body.partner-account #recentClientsBox,
+body.partner-account #deletedOrdersCard{display:none!important}
+.partner-client-field{grid-column:1/-1}
+.partner-client-summary{margin-top:8px;padding:10px 12px;border:1px solid #c7d7ff;border-radius:12px;background:#f8fbff;color:#344054;font-size:13px;font-weight:700}
+</style>
+<script id="sphera-partner-role-script">
+(function(){
+  'use strict';
+  const PARTNER_ROLE='partner';
+  const roleKey=value=>String(value||'').trim().toLowerCase();
+  const isPartner=user=>roleKey((user||currentUser)?.role)===PARTNER_ROLE;
+  const clean=value=>String(value||'').trim();
+  const partnerAccount=()=>{
+    const username=clean(currentUser?.username).toLowerCase();
+    return (USERS||[]).find(user=>clean(user.username).toLowerCase()===username)||currentUser||{};
+  };
+  const clientByCode=code=>(CLIENTS||[]).find(client=>clean(client.code)===clean(code));
+  const partnerClient=user=>{
+    const account=user||partnerAccount();
+    return clientByCode(account.clientCode)||
+      (CLIENTS||[]).find(client=>clean(client.id)===clean(account.clientId))||
+      (CLIENTS||[]).find(client=>norm(client.name)===norm(account.clientName));
+  };
+  const creatorMatches=(order,user=currentUser)=>{
+    if(!order||!user)return false;
+    const username=clean(user.username).toLowerCase();
+    const uid=clean(user.uid||user.id);
+    return !!(
+      uid&&[order.createdById,order.createdByUid,order.creatorUid,order.userId].some(value=>clean(value)===uid)||
+      username&&[order.createdByUsername,order.creatorUsername,order.createdByAccount].some(value=>clean(value).toLowerCase()===username)
+    );
+  };
+  const launched=order=>{
+    const status=order?.workflowStatus||order?.status||'Lansată';
+    return norm(status)==='lansata';
+  };
+  const permissions=()=>({
+    canCreateOrder:!!currentUser,
+    canChooseClient:false,
+    canViewAllClients:false,
+    canEditOwnOrder:true,
+    canDeleteOwnOrder:true,
+    canChangeStatus:false,
+    canManageCatalogs:false,
+    canManageUsers:false
+  });
+  window.partnerPermissions=permissions;
+  window.isPartner=isPartner;
+
+  const baseRoleLabel=window.roleLabel||roleLabel;
+  window.roleLabel=function(role){return roleKey(role)===PARTNER_ROLE?'Partener':baseRoleLabel(role)};
+
+  const baseVisibleOrders=window.visibleOrders;
+  window.visibleOrders=function(){
+    if(!isPartner())return baseVisibleOrders.apply(this,arguments);
+    return (orders||[]).filter(order=>creatorMatches(order));
+  };
+  const baseProcessingVisibleOrders=window.processingVisibleOrders;
+  window.processingVisibleOrders=function(){
+    if(isPartner())return visibleOrders();
+    return baseProcessingVisibleOrders?baseProcessingVisibleOrders.apply(this,arguments):visibleOrders();
+  };
+  const baseCanCreateOrders=window.canCreateOrders;
+  window.canCreateOrders=function(){return isPartner()?!!permissions().canCreateOrder:baseCanCreateOrders.apply(this,arguments)};
+  const baseCanManageClients=window.canManageClients;
+  window.canManageClients=function(){return isPartner()?false:baseCanManageClients.apply(this,arguments)};
+  const baseCanEditOrder=window.canEditOrder;
+  window.canEditOrder=function(order){return isPartner()?creatorMatches(order)&&launched(order):baseCanEditOrder.apply(this,arguments)};
+  const baseCanDeleteOrder=window.canDeleteOrder;
+  window.canDeleteOrder=function(order){return isPartner()?creatorMatches(order)&&launched(order):baseCanDeleteOrder.apply(this,arguments)};
+  const baseCanSetWorkflowStep=window.canSetWorkflowStep;
+  window.canSetWorkflowStep=function(status,order){return isPartner()?false:baseCanSetWorkflowStep.apply(this,arguments)};
+  const baseSetWorkflowStatus=window.setWorkflowStatus;
+  window.setWorkflowStatus=function(){if(isPartner())return false;return baseSetWorkflowStatus&&baseSetWorkflowStatus.apply(this,arguments)};
+  const baseToggleOrderStatus=window.toggleOrderStatus;
+  window.toggleOrderStatus=function(){if(isPartner())return false;return baseToggleOrderStatus&&baseToggleOrderStatus.apply(this,arguments)};
+
+  function enforcePartnerUI(){
+    const partner=isPartner();
+    document.body.classList.toggle('partner-account',partner);
+    ['menuProcessing','menuClients','menuNomenclators','menuSettings'].forEach(id=>{
+      const element=document.getElementById(id);
+      if(element)element.style.setProperty('display',partner?'none':'','important');
+    });
+    const badge=document.getElementById('accountBadge');
+    if(partner&&badge){badge.textContent='Partener';badge.classList.remove('hide')}
+  }
+  const baseApplyPermissions=window.applyPermissions;
+  window.applyPermissions=function(){const result=baseApplyPermissions&&baseApplyPermissions.apply(this,arguments);enforcePartnerUI();return result};
+  const baseRender=window.render;
+  window.render=function(){const result=baseRender&&baseRender.apply(this,arguments);enforcePartnerUI();return result};
+  const baseShowPage=window.showPage;
+  window.showPage=function(id,button){
+    if(isPartner()&&id!=='dashboard')return baseShowPage.call(this,'dashboard',document.getElementById('menuDashboard'));
+    return baseShowPage.apply(this,arguments);
+  };
+
+  function ensurePartnerUserFields(){
+    const role=document.getElementById('newUserRole');
+    if(role&&!role.querySelector('option[value="partner"]'))role.insertAdjacentHTML('beforeend','<option value="partner">Partener</option>');
+    const centerField=document.getElementById('newUserCenterField');
+    if(centerField&&!document.getElementById('newUserPartnerClientField')){
+      centerField.insertAdjacentHTML('beforebegin','<div class="field partner-client-field hide" id="newUserPartnerClientField"><label>Client asociat</label><select id="newUserPartnerClient"></select><div class="partner-client-summary" id="newUserPartnerClientSummary"></div></div>');
+    }
+    const select=document.getElementById('newUserPartnerClient');
+    if(select&&!select.options.length){
+      const clients=[...(CLIENTS||[])].sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ro'));
+      select.innerHTML='<option value="">Selectează clientul</option>'+clients.map(client=>'<option value="'+esc(client.code||'')+'">'+esc(client.name||'')+' · '+esc(client.city||'')+' · '+esc(client.code||'')+'</option>').join('');
+      select.addEventListener('change',syncPartnerClientSummary);
+    }
+  }
+  function syncPartnerClientSummary(){
+    const code=document.getElementById('newUserPartnerClient')?.value;
+    const client=clientByCode(code),summary=document.getElementById('newUserPartnerClientSummary');
+    if(summary)summary.textContent=client?'Cod client: '+client.code+' · Localitate: '+(client.city||'Nespecificată'):'Selectează clientul din baza existentă.';
+  }
+  const baseSyncUserCenterField=window.syncUserCenterField;
+  window.syncUserCenterField=function(){
+    ensurePartnerUserFields();
+    const partner=document.getElementById('newUserRole')?.value===PARTNER_ROLE;
+    const result=baseSyncUserCenterField&&baseSyncUserCenterField.apply(this,arguments);
+    document.getElementById('newUserPartnerClientField')?.classList.toggle('hide',!partner);
+    const center=document.getElementById('newUserCenter');
+    if(partner&&center)center.disabled=false;
+    syncPartnerClientSummary();
+    return result;
+  };
+  const baseOpenUserDialog=window.openUserDialog;
+  window.openUserDialog=function(){const result=baseOpenUserDialog&&baseOpenUserDialog.apply(this,arguments);ensurePartnerUserFields();syncUserCenterField();return result};
+
+  const baseAddUserAccount=window.addUserAccount;
+  window.addUserAccount=function(){
+    if(document.getElementById('newUserRole')?.value!==PARTNER_ROLE)return baseAddUserAccount.apply(this,arguments);
+    if(!guardAdmin())return;
+    const name=capWords(cleanVal('newUserFullName'));
+    const parts=name.split(/\s+/).filter(Boolean);
+    const username=parts.length>=2?slug(parts[0])+'.'+slug(parts[1]):slug(cleanVal('newUsername'));
+    const pass=cleanVal('newUserPassword')||generateUserPassword(username);
+    const center=cleanVal('newUserCenter');
+    const client=clientByCode(document.getElementById('newUserPartnerClient')?.value);
+    if(!name||parts.length<2||!username||!center||!client){showAppConfirm({title:'Date incomplete',text:'Completează numele, clientul asociat și centrul responsabil.',confirmText:'OK'});return}
+    if(USERS.some(user=>slug(user.username)===username)){showAppConfirm({title:'Utilizator existent',text:'Există deja contul '+username+'.',confirmText:'OK'});return}
+    const responsibleOperator=(CENTERS||[]).find(item=>norm(item.center)===norm(center));
+    USERS.unshift({name,username,pass,role:PARTNER_ROLE,center,clientId:client.id||client.code,clientCode:client.code,clientName:client.name,operatorCode:String(responsibleOperator?.operatorCode||'00').padStart(2,'0').slice(-2),createdAt:Date.now()});
+    saveUsers();renderUsersAdmin();closeUserDialog();
+    showAppConfirm({title:'Utilizator creat',text:'Utilizator: '+username+'\nParolă: '+pass+'\nClient: '+client.name+' · '+client.code,confirmText:'OK'});
+  };
+
+  const baseRenderUsersAdmin=window.renderUsersAdmin;
+  window.renderUsersAdmin=function(){
+    const result=baseRenderUsersAdmin&&baseRenderUsersAdmin.apply(this,arguments);
+    ensurePartnerUserFields();
+    const rows=document.querySelectorAll('#usersAdminList .user-row');
+    rows.forEach(row=>{
+      const name=row.querySelector('b')?.textContent||'';
+      const account=(USERS||[]).find(user=>norm(user.name)===norm(name));
+      const roleSelect=[...row.querySelectorAll('select')].find(select=>select.querySelector('option[value="operator"]'));
+      if(roleSelect&&!roleSelect.querySelector('option[value="partner"]'))roleSelect.insertAdjacentHTML('beforeend','<option value="partner">Partener</option>');
+      if(roleSelect&&account)roleSelect.value=account.role;
+      if(account?.role===PARTNER_ROLE&&!row.querySelector('.partner-client-summary')){
+        const client=partnerClient(account);
+        const info=document.createElement('div');info.className='partner-client-summary';info.textContent=client?'Client: '+client.name+' · '+client.code:'Client neasociat';row.appendChild(info);
+      }
+    });
+    return result;
+  };
+
+  const baseOpenWizard=window.openWizard;
+  window.openWizard=function(){
+    if(!isPartner())return baseOpenWizard.apply(this,arguments);
+    const account=partnerAccount(),client=partnerClient(account);
+    if(!client){showAppConfirm({title:'Client neasociat',text:'Administratorul trebuie să asocieze contul cu un client existent.',confirmText:'OK'});return}
+    baseOpenWizard.apply(this,arguments);
+    draft.client={...client};
+    draft.clientQuery=client.name;
+    draft.center=account.center||currentUser.center||'';
+    draft.mount=draft.center;
+    draft.operator=currentUser.name||currentUser.username||'';
+    step=1;
+    drawStep();
+  };
+  const basePrevStep=window.prevStep;
+  window.prevStep=function(){if(isPartner()&&step<=1)return;return basePrevStep.apply(this,arguments)};
+
+  const baseCreateOrder=window.createOrder;
+  window.createOrder=async function(){
+    if(isPartner()){
+      const account=partnerAccount(),client=partnerClient(account);
+      if(!client)return;
+      draft.client={...client};draft.center=account.center||currentUser.center||'';draft.operator=currentUser.name||currentUser.username||'';
+    }
+    const before=new Set((orders||[]).map(order=>String(order.id)));
+    const result=await baseCreateOrder.apply(this,arguments);
+    const created=(orders||[]).find(order=>!before.has(String(order.id)));
+    if(created&&isPartner()){
+      const account=partnerAccount(),client=partnerClient(account);
+      Object.assign(created,{
+        client:{...client},center:account.center||currentUser.center||created.center,
+        createdById:currentUser.uid||currentUser.id||'',createdByUid:currentUser.uid||'',
+        createdByUsername:currentUser.username||'',createdByAccount:currentUser.username||'',
+        createdByName:currentUser.name||currentUser.username||'',createdByRole:PARTNER_ROLE,
+        createdByCenter:account.center||currentUser.center||'',launchedByType:'Partener',
+        responsibleCenter:account.center||currentUser.center||'',partnerClientCode:client?.code||''
+      });
+      save();render();
+    }
+    return result;
+  };
+
+  const baseDeleteOrder=window.deleteOrder;
+  window.deleteOrder=function(id){
+    if(isPartner()){
+      const order=(orders||[]).find(item=>String(item.id)===String(id));
+      if(!order||!window.canDeleteOrder(order))return;
+    }
+    return baseDeleteOrder&&baseDeleteOrder.apply(this,arguments);
+  };
+
+  const baseDashboardExport=window.dashboardOrdersForExport;
+  if(typeof baseDashboardExport==='function')window.dashboardOrdersForExport=function(){const list=baseDashboardExport.apply(this,arguments);return isPartner()?list.filter(order=>creatorMatches(order)):list};
+  ensurePartnerUserFields();
+  enforcePartnerUI();
 })();
 </script>
 </body>
