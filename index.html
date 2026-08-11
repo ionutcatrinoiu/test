@@ -10907,6 +10907,14 @@ body.partner-account #recentClientsBox{display:none!important}
 
 
 
+
+<style id="sphera-mobile-performance-fix-v3">
+@media screen and (max-width:760px){
+  .mobile-rx-card,.mobile-client-card,#processingOrdersList .workflow-order{touch-action:manipulation!important}
+  .modal{touch-action:manipulation!important}
+  .modal>.wizard{-webkit-overflow-scrolling:touch!important}
+}
+</style>
 </body>
 </html>
 
@@ -11160,6 +11168,9 @@ body.partner-account #recentClientsBox{display:none!important}
    const page=document.getElementById('clientsPage'),body=document.getElementById('clientRows');if(!page||!body)return;
    let host=page.querySelector('.mobile-client-cards');if(!host){host=document.createElement('div');host.className='mobile-client-cards';page.appendChild(host)}
    const rows=[...body.rows].filter(r=>!r.cells[0]?.hasAttribute('colspan'));
+   const signature=rows.map(r=>[...r.cells].map(td=>td.querySelector('input')?.value||td.textContent.trim()).join('\u001f')).join('\u001e');
+   if(host.dataset.signature===signature)return;
+   host.dataset.signature=signature;
    host.innerHTML=rows.map((r,i)=>{
      const vals=[...r.cells].map(td=>td.querySelector('input')?.value||td.textContent.trim());
      const hasCui=r.querySelector('.client-cui-cell');
@@ -11183,8 +11194,25 @@ body.partner-account #recentClientsBox{display:none!important}
  }
 
  function sync(){tuneWizard();clientCards();statusMobile()}
- const obs=new MutationObserver(()=>requestAnimationFrame(sync));obs.observe(document.body,{childList:true,subtree:true});
- window.addEventListener('resize',sync);document.addEventListener('DOMContentLoaded',sync);setTimeout(sync,300);
+ let syncQueued=false;
+ function scheduleSync(){
+   if(syncQueued)return;
+   syncQueued=true;
+   requestAnimationFrame(()=>{syncQueued=false;tuneWizard();statusMobile()});
+ }
+ /* Observăm doar zonele sursă. Nu reconstruim cardurile la fiecare mutație din pagină. */
+ const obs=new MutationObserver(mutations=>{
+   if(!mobile())return;
+   const relevant=mutations.some(m=>{
+     const t=m.target;
+     return t && (t.id==='clientRows' || t.id==='processingOrdersList' || t.closest?.('#clientRows,#processingOrdersList,.modal.open'));
+   });
+   if(relevant)scheduleSync();
+ });
+ obs.observe(document.body,{childList:true,subtree:true});
+ window.addEventListener('resize',scheduleSync);
+ document.addEventListener('DOMContentLoaded',()=>{tuneWizard();clientCards();statusMobile()});
+ setTimeout(()=>{tuneWizard();clientCards();statusMobile()},300);
  const oldRenderClients=window.renderClients;window.renderClients=function(){const r=oldRenderClients&&oldRenderClients.apply(this,arguments);setTimeout(clientCards,0);return r};
  const oldStatus=window.SPHERA_renderStatusOrders;window.SPHERA_renderStatusOrders=function(){const r=oldStatus&&oldStatus.apply(this,arguments);setTimeout(statusMobile,0);return r};
 })();
