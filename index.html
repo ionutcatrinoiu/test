@@ -10142,7 +10142,6 @@ html>.sphera-edit-popup.modal.open>.wizard{
 })();
 </script>
 <style id="sphera-partner-role-style">
-body.partner-account #menuProcessing,
 body.partner-account #menuClients,
 body.partner-account #menuNomenclators,
 body.partner-account #menuSettings,
@@ -10151,6 +10150,7 @@ body.partner-account #recentClientsBox,
 body.partner-account #deletedOrdersCard{display:none!important}
 body.partner-account #recentClientsBox{display:none!important}
 .partner-optic-line{margin-top:7px;color:#344054;font-size:15px;font-weight:700}
+.partner-fixed-mount{padding:14px 16px;border:1px solid #b8ccff;border-radius:14px;background:#f8fbff;color:#101828;font-weight:800;box-shadow:0 8px 22px rgba(36,87,255,.08)}
 .partner-client-field{grid-column:1/-1}
 .partner-client-summary{margin-top:8px;padding:10px 12px;border:1px solid #c7d7ff;border-radius:12px;background:#f8fbff;color:#344054;font-size:13px;font-weight:700}
 </style>
@@ -10219,9 +10219,10 @@ body.partner-account #recentClientsBox{display:none!important}
   const partnerCreatedOrder=order=>roleKey(order?.createdByRole)==='partner'||roleKey(order?.launchedByType)==='partener'||!!order?.partnerClientCode;
   window.canSetWorkflowStep=function(status,order){
     if(isPartner())return false;
-    if(partnerCreatedOrder(order)&&roleKey(currentUser?.role)==='operator'){
+    if(partnerCreatedOrder(order)&&['operator','iasi'].includes(roleKey(currentUser?.role))){
       const responsible=order?.responsibleCenter||order?.createdByCenter||order?.center||'';
-      if(norm(currentUser?.center)!==norm(responsible))return false;
+      const master=roleKey(currentUser?.role)==='iasi';
+      if(!master&&norm(currentUser?.center)!==norm(responsible))return false;
       const workflow=typeof orderWorkflowSteps==='function'?orderWorkflowSteps(order):WORKFLOW_STEPS;
       const current=typeof orderWorkflowIndex==='function'?orderWorkflowIndex(order):workflowIndex(order);
       return workflow.indexOf(status)===current+1;
@@ -10236,10 +10237,12 @@ body.partner-account #recentClientsBox{display:none!important}
   function enforcePartnerUI(){
     const partner=isPartner();
     document.body.classList.toggle('partner-account',partner);
-    ['menuProcessing','menuClients','menuNomenclators','menuSettings'].forEach(id=>{
+    ['menuClients','menuNomenclators','menuSettings'].forEach(id=>{
       const element=document.getElementById(id);
       if(element)element.style.setProperty('display',partner?'none':'','important');
     });
+    const statusMenu=document.getElementById('menuProcessing');
+    if(statusMenu)statusMenu.style.setProperty('display',partner?'flex':'','important');
     const badge=document.getElementById('accountBadge');
     if(partner&&badge){badge.textContent='Partener';badge.classList.remove('hide')}
     const recent=document.getElementById('recentClientsBox')?.closest('.card');
@@ -10261,7 +10264,7 @@ body.partner-account #recentClientsBox{display:none!important}
   window.render=function(){const result=baseRender&&baseRender.apply(this,arguments);enforcePartnerUI();return result};
   const baseShowPage=window.showPage;
   window.showPage=function(id,button){
-    if(isPartner()&&id!=='dashboard')return baseShowPage.call(this,'dashboard',document.getElementById('menuDashboard'));
+    if(isPartner()&&!['dashboard','processingPage'].includes(id))return baseShowPage.call(this,'dashboard',document.getElementById('menuDashboard'));
     return baseShowPage.apply(this,arguments);
   };
 
@@ -10388,8 +10391,10 @@ body.partner-account #recentClientsBox{display:none!important}
         draft.mount=responsible;
         const input=document.getElementById('mountInput');
         if(input){
-          const select=document.createElement('select');select.id='mountInput';select.innerHTML='<option value="'+esc(responsible)+'">'+esc(responsible)+'</option>';select.value=responsible;select.disabled=false;
-          input.replaceWith(select)
+          const wrap=input.closest('.mount-center-wrap');
+          const label=wrap?.querySelector('label');if(label)label.textContent='Depozit responsabil de montaj';
+          const fixed=document.createElement('div');fixed.id='mountInput';fixed.className='partner-fixed-mount';fixed.textContent=responsible;
+          input.replaceWith(fixed)
         }
       }
     }
