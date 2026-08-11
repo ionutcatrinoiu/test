@@ -10149,6 +10149,8 @@ body.partner-account #menuSettings,
 body.partner-account #newClientBtn,
 body.partner-account #recentClientsBox,
 body.partner-account #deletedOrdersCard{display:none!important}
+body.partner-account #recentClientsBox{display:none!important}
+.partner-optic-line{margin-top:7px;color:#344054;font-size:15px;font-weight:700}
 .partner-client-field{grid-column:1/-1}
 .partner-client-summary{margin-top:8px;padding:10px 12px;border:1px solid #c7d7ff;border-radius:12px;background:#f8fbff;color:#344054;font-size:13px;font-weight:700}
 </style>
@@ -10179,16 +10181,12 @@ body.partner-account #deletedOrdersCard{display:none!important}
       username&&[order.createdByUsername,order.creatorUsername,order.createdByAccount].some(value=>clean(value).toLowerCase()===username)
     );
   };
-  const launched=order=>{
-    const status=order?.workflowStatus||order?.status||'Lansată';
-    return norm(status)==='lansata';
-  };
   const permissions=()=>({
     canCreateOrder:!!currentUser,
     canChooseClient:false,
     canViewAllClients:false,
-    canEditOwnOrder:true,
-    canDeleteOwnOrder:true,
+    canEditOwnOrder:false,
+    canDeleteOwnOrder:false,
     canChangeStatus:false,
     canManageCatalogs:false,
     canManageUsers:false
@@ -10214,11 +10212,22 @@ body.partner-account #deletedOrdersCard{display:none!important}
   const baseCanManageClients=window.canManageClients;
   window.canManageClients=function(){return isPartner()?false:baseCanManageClients.apply(this,arguments)};
   const baseCanEditOrder=window.canEditOrder;
-  window.canEditOrder=function(order){return isPartner()?creatorMatches(order)&&launched(order):baseCanEditOrder.apply(this,arguments)};
+  window.canEditOrder=function(order){return isPartner()?false:baseCanEditOrder.apply(this,arguments)};
   const baseCanDeleteOrder=window.canDeleteOrder;
-  window.canDeleteOrder=function(order){return isPartner()?creatorMatches(order)&&launched(order):baseCanDeleteOrder.apply(this,arguments)};
+  window.canDeleteOrder=function(order){return isPartner()?false:baseCanDeleteOrder.apply(this,arguments)};
   const baseCanSetWorkflowStep=window.canSetWorkflowStep;
-  window.canSetWorkflowStep=function(status,order){return isPartner()?false:baseCanSetWorkflowStep.apply(this,arguments)};
+  const partnerCreatedOrder=order=>roleKey(order?.createdByRole)==='partner'||roleKey(order?.launchedByType)==='partener'||!!order?.partnerClientCode;
+  window.canSetWorkflowStep=function(status,order){
+    if(isPartner())return false;
+    if(partnerCreatedOrder(order)&&roleKey(currentUser?.role)==='operator'){
+      const responsible=order?.responsibleCenter||order?.createdByCenter||order?.center||'';
+      if(norm(currentUser?.center)!==norm(responsible))return false;
+      const workflow=typeof orderWorkflowSteps==='function'?orderWorkflowSteps(order):WORKFLOW_STEPS;
+      const current=typeof orderWorkflowIndex==='function'?orderWorkflowIndex(order):workflowIndex(order);
+      return workflow.indexOf(status)===current+1;
+    }
+    return baseCanSetWorkflowStep.apply(this,arguments)
+  };
   const baseSetWorkflowStatus=window.setWorkflowStatus;
   window.setWorkflowStatus=function(){if(isPartner())return false;return baseSetWorkflowStatus&&baseSetWorkflowStatus.apply(this,arguments)};
   const baseToggleOrderStatus=window.toggleOrderStatus;
@@ -10233,6 +10242,18 @@ body.partner-account #deletedOrdersCard{display:none!important}
     });
     const badge=document.getElementById('accountBadge');
     if(partner&&badge){badge.textContent='Partener';badge.classList.remove('hide')}
+    const recent=document.getElementById('recentClientsBox')?.closest('.card');
+    if(recent)recent.style.setProperty('display',partner?'none':'','important');
+    const who=document.getElementById('who');
+    if(partner&&who){
+      who.querySelector('.weather-line')?.remove();
+      let optic=who.querySelector('.partner-optic-line');
+      if(!optic){optic=document.createElement('div');optic.className='partner-optic-line';who.appendChild(optic)}
+      optic.textContent='Optică: '+(partnerClient()?.name||partnerAccount().clientName||'Client neasociat');
+    }else who?.querySelector('.partner-optic-line')?.remove();
+    if(partner){
+      document.querySelectorAll('#dashboard button[title*="Edite"],#dashboard button[title^="Șterge comanda"],.order-details-modal button[title*="Edite"],.order-details-modal button[title^="Șterge comanda"]').forEach(button=>button.remove());
+    }
   }
   const baseApplyPermissions=window.applyPermissions;
   window.applyPermissions=function(){const result=baseApplyPermissions&&baseApplyPermissions.apply(this,arguments);enforcePartnerUI();return result};
@@ -10324,12 +10345,56 @@ body.partner-account #deletedOrdersCard{display:none!important}
     draft.clientQuery=client.name;
     draft.center=account.center||currentUser.center||'';
     draft.mount=draft.center;
+    draft.deliveryDestination='client';
+    draft.deliveryCenter='';
     draft.operator=currentUser.name||currentUser.username||'';
     step=1;
     drawStep();
   };
   const basePrevStep=window.prevStep;
-  window.prevStep=function(){if(isPartner()&&step<=1)return;return basePrevStep.apply(this,arguments)};
+  window.prevStep=function(){
+    if(isPartner()&&step<=1)return;
+    if(isPartner()&&step===6){step=4;drawStep();return}
+    return basePrevStep.apply(this,arguments)
+  };
+  const baseNextStep=window.nextStep;
+  window.nextStep=function(){
+    if(isPartner()&&step===4){
+      const account=partnerAccount();
+      draft.center=account.center||currentUser.center||'';
+      if(draft.hasMount===true)draft.mount=draft.center;
+      draft.deliveryDestination='client';draft.deliveryCenter='';
+      if(!validateStep(false))return;
+      step=6;drawStep();return
+    }
+    return baseNextStep.apply(this,arguments)
+  };
+  const baseDrawStep=window.drawStep;
+  window.drawStep=function(){
+    if(isPartner()){
+      const account=partnerAccount();
+      draft.center=account.center||currentUser.center||'';
+      draft.deliveryDestination='client';draft.deliveryCenter='';
+      if(step===4&&draft.hasMount===true)draft.mount=draft.center;
+    }
+    const result=baseDrawStep.apply(this,arguments);
+    if(isPartner()){
+      const visibleSteps={1:1,2:2,3:3,4:4,6:5,7:6};
+      const visible=visibleSteps[step]||1,total=6;
+      if(window.stepNo)stepNo.textContent='Pas '+visible+' din '+total;
+      if(window.bar)bar.style.width=(visible/total*100)+'%';
+      if(step===4&&draft.hasMount===true){
+        const responsible=partnerAccount().center||currentUser.center||'';
+        draft.mount=responsible;
+        const input=document.getElementById('mountInput');
+        if(input){
+          const select=document.createElement('select');select.id='mountInput';select.innerHTML='<option value="'+esc(responsible)+'">'+esc(responsible)+'</option>';select.value=responsible;select.disabled=false;
+          input.replaceWith(select)
+        }
+      }
+    }
+    return result
+  };
 
   const baseCreateOrder=window.createOrder;
   window.createOrder=async function(){
@@ -10337,6 +10402,8 @@ body.partner-account #deletedOrdersCard{display:none!important}
       const account=partnerAccount(),client=partnerClient(account);
       if(!client)return;
       draft.client={...client};draft.center=account.center||currentUser.center||'';draft.operator=currentUser.name||currentUser.username||'';
+      draft.deliveryDestination='client';draft.deliveryCenter='';
+      if(draft.hasMount===true)draft.mount=draft.center;
     }
     const before=new Set((orders||[]).map(order=>String(order.id)));
     const result=await baseCreateOrder.apply(this,arguments);
