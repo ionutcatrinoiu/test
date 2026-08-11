@@ -2587,7 +2587,7 @@ function render(){
    if(orderViewMode==='today') ok=o.date===new Date().toISOString().slice(0,10);
    if(orderViewMode==='open') ok=o.status!=='Livrată';
    if(orderViewMode==='delivered') ok=o.status==='Livrată';
-   if(orderViewMode==='delayed') ok=isDelayedOrder(o); if(orderViewMode==='transit') ok=workflowIndex(o)===WORKFLOW_STEPS.indexOf('Check-out');
+   if(orderViewMode==='delayed') ok=isDelayedOrder(o); if(orderViewMode==='transit') ok=typeof window.isPartnerTransitOrder==='function'?window.isPartnerTransitOrder(o):workflowIndex(o)===WORKFLOW_STEPS.indexOf('Check-out');
    const values=[processingCenterLabel(o),o.code,o.client.name,o.patient,productSummary(o),odText(o),osText(o),addText(o),o?.rx?.odSph,o?.rx?.odCyl,o?.rx?.odAx,o?.rx?.odAdd,o?.rx?.osSph,o?.rx?.osCyl,o?.rx?.osAx,o?.rx?.osAdd];
    const haystack=norm(values.join(' '));
    const rxAliases=values.flatMap(v=>rxQueryVariants(v)).join(' ');
@@ -10205,6 +10205,7 @@ body.partner-account #recentClientsBox{display:none!important}
     canEditOwnOrder:false,
     canDeleteOwnOrder:false,
     canChangeStatus:false,
+    canMarkDelivered:true,
     canManageCatalogs:false,
     canManageUsers:false
   });
@@ -10238,8 +10239,19 @@ body.partner-account #recentClientsBox{display:none!important}
   window.canDeleteOrder=function(order){return isPartner()?false:baseCanDeleteOrder.apply(this,arguments)};
   const baseCanSetWorkflowStep=window.canSetWorkflowStep;
   const partnerCreatedOrder=order=>roleKey(order?.createdByRole)==='partner'||roleKey(order?.launchedByType)==='partener'||!!order?.partnerClientCode;
+  const workflowFor=order=>typeof orderWorkflowSteps==='function'?orderWorkflowSteps(order):WORKFLOW_STEPS;
+  const workflowPosition=order=>typeof orderWorkflowIndex==='function'?orderWorkflowIndex(order):workflowIndex(order);
+  const isPenultimateStatus=order=>{
+    const workflow=workflowFor(order),current=workflowPosition(order);
+    return current===workflow.length-2;
+  };
+  window.isPartnerTransitOrder=function(order){return isPartner()?isPenultimateStatus(order):workflowIndex(order)===WORKFLOW_STEPS.indexOf('Check-out')};
   window.canSetWorkflowStep=function(status,order){
-    if(isPartner())return false;
+    if(isPartner()){
+      if(!creatorMatches(order))return false;
+      const workflow=workflowFor(order),current=workflowPosition(order);
+      return status===workflow[workflow.length-1]&&current===workflow.length-2;
+    }
     if(partnerCreatedOrder(order)&&['operator','iasi'].includes(roleKey(currentUser?.role))){
       const responsible=orderResponsibleCenter(order);
       const master=roleKey(currentUser?.role)==='iasi';
@@ -10251,7 +10263,13 @@ body.partner-account #recentClientsBox{display:none!important}
     return baseCanSetWorkflowStep.apply(this,arguments)
   };
   const baseSetWorkflowStatus=window.setWorkflowStatus;
-  window.setWorkflowStatus=function(){if(isPartner())return false;return baseSetWorkflowStatus&&baseSetWorkflowStatus.apply(this,arguments)};
+  window.setWorkflowStatus=function(id,status){
+    if(isPartner()){
+      const order=(orders||[]).find(item=>String(item.id)===String(id));
+      if(!canSetWorkflowStep(status,order))return false;
+    }
+    return baseSetWorkflowStatus&&baseSetWorkflowStatus.apply(this,arguments)
+  };
   const baseToggleOrderStatus=window.toggleOrderStatus;
   window.toggleOrderStatus=function(){if(isPartner())return false;return baseToggleOrderStatus&&baseToggleOrderStatus.apply(this,arguments)};
 
@@ -10286,12 +10304,12 @@ body.partner-account #recentClientsBox{display:none!important}
     const result=baseRender&&baseRender.apply(this,arguments);enforcePartnerUI();
     if(isPartner()){
       const transit=document.getElementById('kTransit');
-      if(transit)transit.textContent=String(visibleOrders().filter(order=>norm(order.workflowStatus||order.status)==='livrata').length);
+      if(transit)transit.textContent=String(visibleOrders().filter(isPenultimateStatus).length);
     }
     return result
   };
   const baseShowOrdersList=window.showOrdersList;
-  window.showOrdersList=function(mode){return isPartner()&&mode==='transit'?baseShowOrdersList.call(this,'delivered'):baseShowOrdersList.apply(this,arguments)};
+  window.showOrdersList=function(mode){return baseShowOrdersList.apply(this,arguments)};
   const baseShowPage=window.showPage;
   window.showPage=function(id,button){
     if(isPartner()&&!['dashboard','processingPage'].includes(id))return baseShowPage.call(this,'dashboard',document.getElementById('menuDashboard'));
