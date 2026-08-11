@@ -10942,6 +10942,13 @@ body.partner-account #recentClientsBox{display:none!important}
   .mobile-rx-footer strong{font-weight:800!important;overflow-wrap:anywhere!important}
   .mobile-deleted-extra{display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px 12px!important;margin-top:10px!important;padding-top:10px!important;border-top:1px solid #e4e7ec!important}
   .mobile-deleted-extra .mobile-rx-value{font-size:11px!important}
+  .mobile-rx-notes{display:flex!important;gap:5px!important;align-items:flex-start!important;margin-top:7px!important;font-size:12.5px!important;line-height:1.4!important;color:#475467!important}
+  .mobile-rx-notes .mobile-rx-label{display:inline!important;margin:2px 0 0!important;flex:0 0 auto!important}
+  .mobile-rx-notes span:last-child{font-weight:600!important;white-space:pre-line!important;overflow-wrap:anywhere!important}
+  .mobile-rx-card.mobile-grouped{background:#fbfdff!important;border-left:3px solid #165dff!important}
+  .mobile-rx-card.mobile-group-start{margin-bottom:-8px!important;border-bottom-left-radius:8px!important;border-bottom-right-radius:8px!important}
+  .mobile-rx-card.mobile-group-end{border-top-left-radius:8px!important;border-top-right-radius:8px!important}
+  .mobile-rx-card.mobile-group-start:after{content:""!important;position:absolute!important;left:-3px!important;bottom:-9px!important;width:14px!important;height:10px!important;border-left:3px solid #165dff!important;pointer-events:none!important}
   .mobile-rx-empty{padding:18px 8px!important;text-align:center!important;color:#667085!important;font-size:13px!important}
 }
 @media screen and (min-width:761px){.mobile-rx-cards{display:none!important}}
@@ -10964,24 +10971,37 @@ body.partner-account #recentClientsBox{display:none!important}
     return match?{name:text.slice(0,match.index).trim(),details:text.slice(match.index).trim()}:{name:text,details:''};
   }
   function actionHtml(cell){return cell?cell.innerHTML:''}
+  function orderByCode(code){
+    const list=(typeof orders!=='undefined'&&Array.isArray(orders))?orders:(Array.isArray(window.orders)?window.orders:[]);
+    return list.find(o=>String(o?.code||'').trim()===String(code||'').trim());
+  }
+  function groupClasses(order,previous,next){
+    const id=String(order?.shippingGroupId||'').trim();
+    if(!id)return '';
+    const p=String(previous?.shippingGroupId||'').trim(),n=String(next?.shippingGroupId||'').trim();
+    return ' mobile-grouped'+(p!==id?' mobile-group-start':'')+(n!==id?' mobile-group-end':'');
+  }
   function buildActiveCards(){
-    const host=document.getElementById('ordersListBox');
-    const tbody=document.getElementById('orderRows');
+    const host=document.getElementById('ordersListBox'),tbody=document.getElementById('orderRows');
     if(!host||!tbody)return;
     let cards=host.querySelector(':scope>.mobile-rx-cards');
     if(!cards){cards=document.createElement('div');cards.className='mobile-rx-cards';host.appendChild(cards)}
     const rows=[...tbody.rows].filter(row=>row.cells.length>=8&&!row.cells[0].hasAttribute('colspan'));
     if(!rows.length){cards.innerHTML='<div class="mobile-rx-empty">Nu există comenzi.</div>';return}
-    cards.innerHTML=rows.map((row,index)=>{
-      const c=row.cells,prod=productParts(c[3]),od=splitRx(c[4].textContent),os=splitRx(c[5].textContent);
-      const adds=[...c[6].querySelectorAll('.add-value')].map(el=>el.textContent.trim()).filter(Boolean);
-      const addOD=adds[0]||'–',addOS=adds[1]||adds[0]||'–';
-      return `<article class="mobile-rx-card" data-source-row="${index}">
-        <div class="mobile-rx-card-head"><div><span class="mobile-rx-label">Cod RX</span><div class="mobile-rx-code">${escLocal(c[0].textContent.trim())}</div></div><div class="mobile-rx-actions">${actionHtml(c[8])}${actionHtml(c[9])}</div></div>
+    const items=rows.map(row=>({row,order:orderByCode(row.cells[0]?.textContent.trim())}));
+    cards.innerHTML=items.map((item,index)=>{
+      const row=item.row,c=row.cells,order=item.order||{},prod=productParts(c[3]),od=splitRx(c[4].textContent),os=splitRx(c[5].textContent);
+      const adds=[...c[6].querySelectorAll('.add-value')].map(el=>el.textContent.trim()).filter(Boolean),addOD=adds[0]||'–',addOS=adds[1]||adds[0]||'–';
+      const notes=String(order.notes||'').trim();
+      const statusCell=row.querySelector('.status-cell'),deleteCell=row.querySelector('.delete-cell');
+      const cls=groupClasses(order,items[index-1]?.order,items[index+1]?.order);
+      return `<article class="mobile-rx-card${cls}" data-source-row="${index}">
+        <div class="mobile-rx-card-head"><div><span class="mobile-rx-label">Cod RX</span><div class="mobile-rx-code">${escLocal(c[0].textContent.trim())}</div></div><div class="mobile-rx-actions">${actionHtml(statusCell)}${actionHtml(deleteCell)}</div></div>
         <div class="mobile-rx-meta"><div><span class="mobile-rx-label">Centru</span><div class="mobile-rx-value">${escLocal(c[1].textContent.trim())}</div></div><div><span class="mobile-rx-label">Client</span><div class="mobile-rx-value">${escLocal(c[2].textContent.trim())}</div></div></div>
         <div class="mobile-rx-section"><span class="mobile-rx-label">Produs</span><div class="mobile-rx-product-name">${escLocal(prod.name)}</div>${prod.details?`<div class="mobile-rx-product-details">${escLocal(prod.details)}</div>`:''}</div>
         <div class="mobile-rx-section"><span class="mobile-rx-label">Dioptrii</span><div class="mobile-rx-rxgrid"><div></div><div class="rxh">Sferă</div><div class="rxh">Cilindru</div><div class="rxh">Ax</div><div class="rxh">ADD</div><div class="eye">OD</div><div>${escLocal(od.sph)}</div><div>${escLocal(od.cyl)}</div><div>${escLocal(od.ax)}</div><div>${escLocal(addOD)}</div><div class="eye">OS</div><div>${escLocal(os.sph)}</div><div>${escLocal(os.cyl)}</div><div>${escLocal(os.ax)}</div><div>${escLocal(addOS)}</div></div></div>
-        <div class="mobile-rx-footer"><span class="mobile-rx-label">Pacient:</span><strong>${escLocal(c[7].textContent.trim()||'–')}</strong></div>
+        <div class="mobile-rx-footer"><span class="mobile-rx-label">Pacient:</span><strong>${escLocal(order.patient||c[7].textContent.trim()||'–')}</strong></div>
+        ${notes?`<div class="mobile-rx-notes"><span class="mobile-rx-label">Mențiuni:</span><span>${escLocal(notes)}</span></div>`:''}
       </article>`;
     }).join('');
     [...cards.querySelectorAll('.mobile-rx-card')].forEach((card,i)=>{
@@ -10990,26 +11010,27 @@ body.partner-account #recentClientsBox{display:none!important}
     });
   }
   function buildDeletedCards(){
-    const host=document.getElementById('deletedOrdersListBox');
-    const tbody=document.getElementById('deletedOrderRows');
+    const host=document.getElementById('deletedOrdersListBox'),tbody=document.getElementById('deletedOrderRows');
     if(!host||!tbody)return;
     let cards=host.querySelector(':scope>.mobile-rx-cards');
     if(!cards){cards=document.createElement('div');cards.className='mobile-rx-cards mobile-deleted-cards';host.appendChild(cards)}
     const rows=[...tbody.rows].filter(row=>row.cells.length>=7&&!row.cells[0].hasAttribute('colspan'));
     if(!rows.length){cards.innerHTML='<div class="mobile-rx-empty">Nu există comenzi șterse.</div>';return}
     cards.innerHTML=rows.map((row,index)=>{
-      const c=row.cells,code=c[0].textContent.trim(),prod=productParts(c[3]);
-      const item=(window.deletedOrders||deletedOrders||[]).find(entry=>String(entry?.order?.code||entry?.orderId||'').trim()===code);
-      const order=item?.order||{};
-      const od=splitRx(typeof odText==='function'?odText(order):''),os=splitRx(typeof osText==='function'?osText(order):'');
-      const addRaw=typeof addText==='function'?String(addText(order)||''):'';const adds=addRaw.split(/\s*\/\s*/).filter(Boolean);
+      const c=row.cells,code=c[0].textContent.trim();
+      const deletedList=(typeof deletedOrders!=='undefined'&&Array.isArray(deletedOrders))?deletedOrders:(Array.isArray(window.deletedOrders)?window.deletedOrders:[]);
+      const item=deletedList.find(entry=>String(entry?.order?.code||entry?.orderId||'').trim()===code),order=item?.order||{};
+      const prod=productParts(c[3]),od=splitRx(order.rx?`${order.rx.odSph||''} ${order.rx.odCyl||''} ax ${order.rx.odAx||''}`:''),os=splitRx(order.rx?`${order.rx.osSph||''} ${order.rx.osCyl||''} ax ${order.rx.osAx||''}`:'');
+      const notes=String(order.notes||'').trim();
+      const actionCells=[...c].slice(-2);
       return `<article class="mobile-rx-card" data-source-row="${index}">
-        <div class="mobile-rx-card-head"><div><span class="mobile-rx-label">Cod RX</span><div class="mobile-rx-code">${escLocal(code)}</div></div><div class="mobile-rx-actions">${actionHtml(c[7])}${actionHtml(c[8])}</div></div>
-        <div class="mobile-rx-meta"><div><span class="mobile-rx-label">Centru</span><div class="mobile-rx-value">${escLocal(c[4].textContent.trim())}</div></div><div><span class="mobile-rx-label">Client</span><div class="mobile-rx-value">${escLocal(c[2].textContent.trim())}</div></div></div>
+        <div class="mobile-rx-card-head"><div><span class="mobile-rx-label">Cod RX</span><div class="mobile-rx-code">${escLocal(code)}</div></div><div class="mobile-rx-actions">${actionCells.map(actionHtml).join('')}</div></div>
+        <div class="mobile-rx-meta"><div><span class="mobile-rx-label">Centru</span><div class="mobile-rx-value">${escLocal(order.center||c[4]?.textContent.trim()||'–')}</div></div><div><span class="mobile-rx-label">Client</span><div class="mobile-rx-value">${escLocal(order.client?.name||c[2]?.textContent.trim()||'–')}</div></div></div>
         <div class="mobile-rx-section"><span class="mobile-rx-label">Produs</span><div class="mobile-rx-product-name">${escLocal(prod.name)}</div>${prod.details?`<div class="mobile-rx-product-details">${escLocal(prod.details)}</div>`:''}</div>
-        <div class="mobile-rx-section"><span class="mobile-rx-label">Dioptrii</span><div class="mobile-rx-rxgrid"><div></div><div class="rxh">Sferă</div><div class="rxh">Cilindru</div><div class="rxh">Ax</div><div class="rxh">ADD</div><div class="eye">OD</div><div>${escLocal(od.sph)}</div><div>${escLocal(od.cyl)}</div><div>${escLocal(od.ax)}</div><div>${escLocal(adds[0]||'–')}</div><div class="eye">OS</div><div>${escLocal(os.sph)}</div><div>${escLocal(os.cyl)}</div><div>${escLocal(os.ax)}</div><div>${escLocal(adds[1]||adds[0]||'–')}</div></div></div>
+        <div class="mobile-rx-section"><span class="mobile-rx-label">Dioptrii</span><div class="mobile-rx-rxgrid"><div></div><div class="rxh">Sferă</div><div class="rxh">Cilindru</div><div class="rxh">Ax</div><div class="rxh">ADD</div><div class="eye">OD</div><div>${escLocal(od.sph)}</div><div>${escLocal(od.cyl)}</div><div>${escLocal(od.ax)}</div><div>${escLocal(order.rx?.odAdd||'–')}</div><div class="eye">OS</div><div>${escLocal(os.sph)}</div><div>${escLocal(os.cyl)}</div><div>${escLocal(os.ax)}</div><div>${escLocal(order.rx?.osAdd||'–')}</div></div></div>
         <div class="mobile-rx-footer"><span class="mobile-rx-label">Pacient:</span><strong>${escLocal(order.patient||'–')}</strong></div>
-        <div class="mobile-deleted-extra"><div><span class="mobile-rx-label">Șters la</span><div class="mobile-rx-value">${escLocal(c[5].textContent.trim())}</div></div><div><span class="mobile-rx-label">Șters de</span><div class="mobile-rx-value">${escLocal(c[6].textContent.trim())}</div></div></div>
+        ${notes?`<div class="mobile-rx-notes"><span class="mobile-rx-label">Mențiuni:</span><span>${escLocal(notes)}</span></div>`:''}
+        <div class="mobile-deleted-extra"><div><span class="mobile-rx-label">Șters la</span><div class="mobile-rx-value">${escLocal(c[5]?.textContent.trim()||'')}</div></div><div><span class="mobile-rx-label">Șters de</span><div class="mobile-rx-value">${escLocal(c[6]?.textContent.trim()||'')}</div></div></div>
       </article>`;
     }).join('');
     [...cards.querySelectorAll('.mobile-rx-card')].forEach((card,i)=>{
@@ -11023,11 +11044,8 @@ body.partner-account #recentClientsBox{display:none!important}
   window.render=function(){const result=originalRender&&originalRender.apply(this,arguments);sync();return result};
   const originalDeleted=window.renderDeletedOrders;
   window.renderDeletedOrders=function(){const result=originalDeleted&&originalDeleted.apply(this,arguments);sync();return result};
-  document.addEventListener('DOMContentLoaded',sync);
-  window.addEventListener('load',sync);
-  window.addEventListener('resize',sync);
+  document.addEventListener('DOMContentLoaded',sync);window.addEventListener('load',sync);window.addEventListener('resize',sync);
   const observer=new MutationObserver(m=>{if(m.some(x=>x.target?.closest?.('#orderRows,#deletedOrderRows')||x.target?.id==='orderRows'||x.target?.id==='deletedOrderRows'))sync()});
-  observer.observe(document.documentElement,{childList:true,subtree:true});
-  sync();
+  observer.observe(document.documentElement,{childList:true,subtree:true});sync();
 })();
 </script>
