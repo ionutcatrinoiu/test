@@ -3057,7 +3057,10 @@ document.addEventListener('DOMContentLoaded',()=>{
       ...value,
       _cloudUpdatedAt:serverTime(),
       _cloudUpdatedBy:auth.currentUser.uid
-    },{merge:false}).then(()=>stateReference.set({initialized:true,updatedAt:serverTime()},{merge:true}));
+    },{merge:false}).then(()=>{
+      stateReference.set({initialized:true,updatedAt:serverTime()},{merge:true}).catch(error=>console.warn('SPHERA orders state repair',error));
+      return true;
+    });
     return Promise.race([primary,fallback]).catch(error=>{console.error('SPHERA order sync repair',error);return false});
   };
 
@@ -3067,11 +3070,12 @@ document.addEventListener('DOMContentLoaded',()=>{
     const existing=(orders||[]).find(order=>String(order?.id||'')===orderId);
     const primary=Promise.resolve().then(()=>deleteOrder.apply(this,arguments));
     if(!orderId||!auth.currentUser)return primary;
-    const batch=db.batch(),docId=documentId(orderId),time=Date.now();
-    batch.set(ordersCollection.doc(docId),{id:orderId,_deleted:true,deletedAt:serverTime(),deletedAtMs:time,deletedBy:auth.currentUser.uid},{merge:false});
-    batch.set(deletedCollection.doc(docId),{orderId,order:existing?cleanOrder(existing):null,deletedAt:serverTime(),deletedAtMs:time,deletedBy:auth.currentUser.uid,deletedByName:currentUser?.name||currentUser?.username||'Utilizator'},{merge:true});
-    batch.set(stateReference,{initialized:true,updatedAt:serverTime()},{merge:true});
-    const fallback=batch.commit().then(()=>true);
+    const docId=documentId(orderId),time=Date.now();
+    const fallback=ordersCollection.doc(docId).set({id:orderId,_deleted:true,deletedAt:serverTime(),deletedAtMs:time,deletedBy:auth.currentUser.uid},{merge:false}).then(()=>{
+      deletedCollection.doc(docId).set({orderId,order:existing?cleanOrder(existing):null,deletedAt:serverTime(),deletedAtMs:time,deletedBy:auth.currentUser.uid,deletedByName:currentUser?.name||currentUser?.username||'Utilizator'},{merge:true}).catch(error=>console.warn('SPHERA deleted history repair',error));
+      stateReference.set({initialized:true,updatedAt:serverTime()},{merge:true}).catch(error=>console.warn('SPHERA orders state repair',error));
+      return true;
+    });
     return Promise.race([primary,fallback]).catch(error=>{console.error('SPHERA delete sync repair',error);return false});
   };
 
@@ -4988,17 +4992,15 @@ cursor:pointer;
     }
     setCloudStatus('Cloud: se salvează comanda','wait');
     try{
-      const batch=db.batch();
-      batch.set(ORDERS_COL.doc(orderDocId(clean)),{
+      await ORDERS_COL.doc(orderDocId(clean)).set({
         ...clean,
         _cloudUpdatedAt:firebase.firestore.FieldValue.serverTimestamp(),
         _cloudUpdatedBy:auth.currentUser.uid
       },{merge:false});
-      batch.set(ORDERS_STATE_REF,{
+      ORDERS_STATE_REF.set({
         initialized:true,
         updatedAt:firebase.firestore.FieldValue.serverTimestamp()
-      },{merge:true});
-      await batch.commit();
+      },{merge:true}).catch(error=>console.warn('SPHERA orders state update',error));
       clearPendingOrderIds([clean.id]);
       lastLocalOrderIds.add(String(clean.id));
       lastLocalOrdersById.set(String(clean.id),clean);
@@ -5204,34 +5206,30 @@ cursor:pointer;
 
     const docId=encodeURIComponent(orderId).replace(/%/g,'_').slice(0,900);
     try{
-      const batch=db.batch();
-      batch.set(ORDERS_COL.doc(docId),{
+      await ORDERS_COL.doc(docId).set({
         id:orderId,
         _deleted:true,
         deletedAt:firebase.firestore.FieldValue.serverTimestamp(),
         deletedAtMs:Date.now(),
         deletedBy:auth.currentUser.uid
       },{merge:false});
-      batch.set(DELETED_ORDERS_COL.doc(docId),{
+      DELETED_ORDERS_COL.doc(docId).set({
         orderId,
         order:deletedOrder?cleanOrderForCloud(deletedOrder):null,
         deletedAt:firebase.firestore.FieldValue.serverTimestamp(),
         deletedAtMs:Date.now(),
         deletedBy:auth.currentUser.uid,
         deletedByName:currentUser?.name||currentUser?.username||'Utilizator'
-      },{merge:true});
-      batch.set(ORDERS_STATE_REF,{
+      },{merge:true}).catch(error=>console.warn('SPHERA deleted order history update',error));
+      ORDERS_STATE_REF.set({
         initialized:true,
         updatedAt:firebase.firestore.FieldValue.serverTimestamp()
-      },{merge:true});
-      await batch.commit();
+      },{merge:true}).catch(error=>console.warn('SPHERA orders state update',error));
       if(deletedOrder){
-        try{
-          await saveSharedDeletedHistory(deletedOrder,{
+        saveSharedDeletedHistory(deletedOrder,{
             deletedBy:currentUser?.name||currentUser?.username||'Utilizator',
             deletedByUid:auth.currentUser.uid
-          });
-        }catch(error){console.warn('SPHERA shared deleted history fallback',error)}
+          }).catch(error=>console.warn('SPHERA shared deleted history fallback',error));
       }
       setCloudStatus('Cloud: comanda a fost ștearsă definitiv','ok');
       return true;
