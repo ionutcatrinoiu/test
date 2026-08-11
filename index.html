@@ -2987,6 +2987,98 @@ document.addEventListener('DOMContentLoaded',()=>{
   if(remembered&&rememberedPass&&btn)btn.focus();else if(remembered&&pass)pass.focus();else if(user)user.focus();
 });
 </script>
+<script id="sphera-orders-cross-device-sync-repair">
+(()=>{
+  'use strict';
+  window.addEventListener('load',()=>{
+  const db=window.SPHERA_DB;
+  const auth=window.SPHERA_AUTH;
+  if(!db||!auth)return;
+
+  const ordersCollection=db.collection('orders');
+  const deletedCollection=db.collection('deletedOrders');
+  const stateReference=db.collection('appData').doc('ordersState');
+  const documentId=value=>encodeURIComponent(String(value||'')).replace(/%/g,'_').slice(0,900);
+  const cleanOrder=order=>JSON.parse(JSON.stringify(order||{}));
+  const serverTime=()=>firebase.firestore.FieldValue.serverTimestamp();
+  let stopOrders=null;
+  let stopDeleted=null;
+
+  function redrawOrders(){
+    try{localStorage.setItem('rx_orders',JSON.stringify(Array.isArray(orders)?orders:[]))}catch(_){}
+    try{if(typeof render==='function')render()}catch(_){}
+    try{if(typeof renderProcessingOrders==='function')renderProcessingOrders()}catch(_){}
+    try{if(typeof window.SPHERA_renderStatusOrders==='function')window.SPHERA_renderStatusOrders()}catch(_){}
+  }
+
+  function applyCloudOrder(order){
+    const id=String(order?.id||'');
+    if(!id)return false;
+    const index=(orders||[]).findIndex(item=>String(item?.id||'')===id);
+    if(order._deleted===true){
+      if(index<0)return false;
+      orders.splice(index,1);
+      return true;
+    }
+    delete order._cloudUpdatedAt;
+    delete order._cloudUpdatedBy;
+    if(index<0){orders.unshift(order);return true}
+    if(JSON.stringify(orders[index])===JSON.stringify(order))return false;
+    orders[index]=order;
+    return true;
+  }
+
+  function startLiveRepair(user){
+    stopOrders?.();stopDeleted?.();stopOrders=null;stopDeleted=null;
+    if(!user)return;
+    stopOrders=ordersCollection.onSnapshot(snapshot=>{
+      let changed=false;
+      snapshot.docChanges().forEach(change=>{
+        if(change.type==='removed')return;
+        changed=applyCloudOrder({...change.doc.data()})||changed;
+      });
+      if(changed)redrawOrders();
+    },error=>console.error('SPHERA live orders repair',error));
+    stopDeleted=deletedCollection.onSnapshot(snapshot=>{
+      const ids=new Set(snapshot.docs.map(doc=>String(doc.data()?.orderId||'')).filter(Boolean));
+      if(!ids.size)return;
+      const next=(orders||[]).filter(order=>!ids.has(String(order?.id||'')));
+      if(next.length===orders.length)return;
+      orders=next;redrawOrders();
+    },error=>console.error('SPHERA live deleted orders repair',error));
+  }
+
+  const saveOrder=window.SPHERA_saveOrderNow;
+  if(typeof saveOrder==='function')window.SPHERA_saveOrderNow=function(order){
+    const primary=Promise.resolve().then(()=>saveOrder.apply(this,arguments));
+    if(!order?.id||!auth.currentUser)return primary;
+    const value=cleanOrder(order);
+    const fallback=ordersCollection.doc(documentId(value.id)).set({
+      ...value,
+      _cloudUpdatedAt:serverTime(),
+      _cloudUpdatedBy:auth.currentUser.uid
+    },{merge:false}).then(()=>stateReference.set({initialized:true,updatedAt:serverTime()},{merge:true}));
+    return Promise.race([primary,fallback]).catch(error=>{console.error('SPHERA order sync repair',error);return false});
+  };
+
+  const deleteOrder=window.SPHERA_deleteOrderPermanently;
+  if(typeof deleteOrder==='function')window.SPHERA_deleteOrderPermanently=function(id){
+    const orderId=String(id||'');
+    const existing=(orders||[]).find(order=>String(order?.id||'')===orderId);
+    const primary=Promise.resolve().then(()=>deleteOrder.apply(this,arguments));
+    if(!orderId||!auth.currentUser)return primary;
+    const batch=db.batch(),docId=documentId(orderId),time=Date.now();
+    batch.set(ordersCollection.doc(docId),{id:orderId,_deleted:true,deletedAt:serverTime(),deletedAtMs:time,deletedBy:auth.currentUser.uid},{merge:false});
+    batch.set(deletedCollection.doc(docId),{orderId,order:existing?cleanOrder(existing):null,deletedAt:serverTime(),deletedAtMs:time,deletedBy:auth.currentUser.uid,deletedByName:currentUser?.name||currentUser?.username||'Utilizator'},{merge:true});
+    batch.set(stateReference,{initialized:true,updatedAt:serverTime()},{merge:true});
+    const fallback=batch.commit().then(()=>true);
+    return Promise.race([primary,fallback]).catch(error=>{console.error('SPHERA delete sync repair',error);return false});
+  };
+
+  auth.onAuthStateChanged(startLiveRepair);
+  });
+})();
+</script>
 <style>
 .delivery-client{display:inline!important;padding:0!important;border-radius:0!important;background:transparent!important;color:#e11d48!important;font-weight:800!important}
 
