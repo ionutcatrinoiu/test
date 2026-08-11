@@ -9964,7 +9964,7 @@ html>.sphera-edit-popup.modal.open>.wizard{
   async function allocateGlobalSequence(){
     if(!window.SPHERA_DB||!window.SPHERA_AUTH?.currentUser)throw new Error('Conexiunea la baza comună nu este disponibilă.');
     const ref=window.SPHERA_DB.collection(COUNTER_REF_PATH[0]).doc(COUNTER_REF_PATH[1]);
-    return window.SPHERA_DB.runTransaction(async transaction=>{
+    const transactionTask=window.SPHERA_DB.runTransaction(async transaction=>{
       const snapshot=await transaction.get(ref);
       const current=snapshot.exists?Number(snapshot.data()?.value||0):0;
       const next=current+1;
@@ -9972,6 +9972,9 @@ html>.sphera-edit-popup.modal.open>.wizard{
       transaction.set(ref,{value:next,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
       return String(next).padStart(5,'0');
     });
+    if(!window.matchMedia('(max-width:900px)').matches)return transactionTask;
+    const timeoutTask=new Promise((_,reject)=>setTimeout(()=>{const e=new Error('Timeout contor mobil');e.code='resource-exhausted-mobile-timeout';reject(e)},4500));
+    return Promise.race([transactionTask,timeoutTask]);
   }
 
   function isRemoteQuotaError(error){
@@ -10915,6 +10918,96 @@ body.partner-account #recentClientsBox{display:none!important}
   .modal>.wizard{-webkit-overflow-scrolling:touch!important}
 }
 </style>
+
+<style id="sphera-mobile-v6-fixes">
+@media (max-width:900px){
+  /* Singurul buton Bug ramane langa Deconectare. */
+  #menuBug{display:none!important}
+
+  /* Adauga client aliniat vertical cu titlul paginii. */
+  #clientsPage .mobile-add-client-btn{top:-66px!important;right:0!important}
+
+  /* X in dreapta sus pentru toate popup-urile mobile. */
+  .mobile-modal-close{
+    position:sticky!important;
+    top:0!important;
+    margin:0 0 6px auto!important;
+    float:none!important;
+  }
+
+  /* Confirmarea ramane centrata in zona utila a ecranului. */
+  #modal.modal.open[data-mobile-step="7"]{align-items:center!important;justify-content:center!important}
+  #modal.modal.open[data-mobile-step="7"]>.wizard{
+    margin:auto!important;
+    max-height:100%!important;
+    top:auto!important;
+    bottom:auto!important;
+  }
+}
+</style>
+<script id="sphera-mobile-v6-runtime">
+(()=>{
+  'use strict';
+  const mobile=()=>matchMedia('(max-width:900px)').matches;
+
+  function keepOnlyAccountBug(){
+    if(!mobile())return;
+    const menuBug=document.getElementById('menuBug');
+    if(menuBug)menuBug.style.setProperty('display','none','important');
+    document.querySelectorAll('.mobile-bug-btn').forEach(btn=>{
+      if(!btn.closest('.mobile-account-panel'))btn.remove();
+    });
+  }
+
+  function normalizeWizard(){
+    if(!mobile())return;
+    const modal=document.getElementById('modal');
+    if(!modal?.classList.contains('open'))return;
+    const current=typeof step==='number'?step:-1;
+    modal.dataset.mobileStep=String(current);
+    const wizard=modal.querySelector(':scope > .wizard');
+    if(!wizard)return;
+    const close=wizard.querySelector(':scope > .mobile-modal-close');
+    if(close){
+      close.style.marginLeft='auto';
+      close.style.marginRight='0';
+    }
+    if(current===7){
+      modal.scrollTop=0;
+      wizard.scrollTop=0;
+      requestAnimationFrame(()=>{modal.scrollTop=0;wizard.scrollTop=0});
+    }
+  }
+
+  /* Pe mobil nu asteptam la infinit sincronizarea cloud dupa ce ordinul este deja salvat local. */
+  const originalImmediateSave=window.SPHERA_saveOrderNow;
+  if(typeof originalImmediateSave==='function'){
+    window.SPHERA_saveOrderNow=function(order){
+      if(!mobile())return originalImmediateSave.apply(this,arguments);
+      const task=Promise.resolve().then(()=>originalImmediateSave.call(this,order));
+      const timeout=new Promise(resolve=>setTimeout(()=>resolve(false),4500));
+      return Promise.race([task,timeout]);
+    };
+  }
+
+  const previousDraw=window.drawStep;
+  if(typeof previousDraw==='function')window.drawStep=function(){
+    const result=previousDraw.apply(this,arguments);
+    requestAnimationFrame(normalizeWizard);
+    return result;
+  };
+  const previousShow=window.showPage;
+  if(typeof previousShow==='function')window.showPage=function(){
+    const result=previousShow.apply(this,arguments);
+    requestAnimationFrame(()=>{keepOnlyAccountBug();normalizeWizard()});
+    return result;
+  };
+  document.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{keepOnlyAccountBug();normalizeWizard()},80));
+  document.addEventListener('click',()=>requestAnimationFrame(keepOnlyAccountBug),true);
+  setTimeout(()=>{keepOnlyAccountBug();normalizeWizard()},300);
+})();
+</script>
+
 </body>
 </html>
 
