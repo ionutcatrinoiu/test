@@ -10627,10 +10627,15 @@ body.partner-account #recentClientsBox{display:none!important}
 
   function enforcePartnerUI(){
     const partner=isPartner();
+    const administrator=['admin','administrator'].includes(roleKey(currentUser?.role));
     document.body.classList.toggle('partner-account',partner);
-    ['menuClients','menuHistory','menuNomenclators','menuSettings'].forEach(id=>{
+    ['menuClients','menuHistory'].forEach(id=>{
       const element=document.getElementById(id);
       if(element)element.style.setProperty('display',partner?'none':'','important');
+    });
+    ['menuNomenclators','menuSettings'].forEach(id=>{
+      const element=document.getElementById(id);
+      if(element)element.style.setProperty('display',administrator&&!partner?'flex':'none','important');
     });
     const statusMenu=document.getElementById('menuProcessing');
     if(statusMenu)statusMenu.style.setProperty('display',partner?'flex':'','important');
