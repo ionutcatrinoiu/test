@@ -4629,8 +4629,8 @@ cursor:pointer;
   const CLOUD_KEYS=['sphera_user_clients','sphera_v19_centers','sphera_v19_indices','sphera_v19_materials','sphera_v19_products','sphera_v19_treatments'];
   let cloudReady=false, applyingRemote=false, saveTimer=null, unsubscribeShared=null, unsubscribeUsers=null;
   let unsubscribeOrders=null, unsubscribeDeletedOrders=null, applyingOrdersRemote=false, ordersReady=false, ordersInitializing=false;
-  let ordersSaveTimer=null, ordersPendingSave=false, lastLocalOrderIds=new Set(), lastLocalOrdersById=new Map(), deletedOrderIds=new Set(), pendingDeletedOrderIds=new Set(), cloudDeletedOrderIds=new Set(), sharedDeletedOrderIds=new Set();
-  function refreshDeletedOrderIds(){deletedOrderIds=new Set([...cloudDeletedOrderIds,...sharedDeletedOrderIds,...pendingDeletedOrderIds])}
+  let ordersSaveTimer=null, ordersPendingSave=false, lastLocalOrderIds=new Set(), lastLocalOrdersById=new Map(), deletedOrderIds=new Set(), pendingDeletedOrderIds=new Set(), cloudDeletedOrderIds=new Set(), sharedDeletedOrderIds=new Set(), orderTombstoneIds=new Set();
+  function refreshDeletedOrderIds(){deletedOrderIds=new Set([...cloudDeletedOrderIds,...sharedDeletedOrderIds,...orderTombstoneIds,...pendingDeletedOrderIds])}
 
   function setCloudStatus(text,type){
     let el=document.getElementById('spheraCloudStatus');
@@ -4815,8 +4815,12 @@ cursor:pointer;
   function applyOrdersFromCloud(list){
     applyingOrdersRemote=true;
     try{
-      orders=(Array.isArray(list)?list:[])
-        .filter(order=>!deletedOrderIds.has(String(order?.id||'')))
+      const cloudList=Array.isArray(list)?list:[];
+      orderTombstoneIds=new Set(cloudList.filter(order=>order?._deleted===true).map(order=>String(order?.id||'')).filter(Boolean));
+      orderTombstoneIds.forEach(id=>pendingDeletedOrderIds.delete(id));
+      refreshDeletedOrderIds();
+      orders=cloudList
+        .filter(order=>order?._deleted!==true&&!deletedOrderIds.has(String(order?.id||'')))
         .map((order,index)=>({order,index}))
         .sort((a,b)=>{
           const timeOf=item=>{
@@ -4874,7 +4878,13 @@ cursor:pointer;
       for(const id of deletedIds){
         const docId=encodeURIComponent(String(id)).replace(/%/g,'_').slice(0,900);
         const deletedOrder=lastLocalOrdersById.get(String(id))||null;
-        batch.delete(ORDERS_COL.doc(docId));
+        batch.set(ORDERS_COL.doc(docId),{
+          id:String(id),
+          _deleted:true,
+          deletedAt:firebase.firestore.FieldValue.serverTimestamp(),
+          deletedAtMs:Date.now(),
+          deletedBy:auth.currentUser.uid
+        },{merge:false});
         batch.set(DELETED_ORDERS_COL.doc(docId),{
           orderId:String(id),
           order:deletedOrder,
@@ -5024,7 +5034,13 @@ cursor:pointer;
     const docId=encodeURIComponent(orderId).replace(/%/g,'_').slice(0,900);
     try{
       const batch=db.batch();
-      batch.delete(ORDERS_COL.doc(docId));
+      batch.set(ORDERS_COL.doc(docId),{
+        id:orderId,
+        _deleted:true,
+        deletedAt:firebase.firestore.FieldValue.serverTimestamp(),
+        deletedAtMs:Date.now(),
+        deletedBy:auth.currentUser.uid
+      },{merge:false});
       batch.set(DELETED_ORDERS_COL.doc(docId),{
         orderId,
         order:deletedOrder?cleanOrderForCloud(deletedOrder):null,
@@ -5096,6 +5112,7 @@ cursor:pointer;
       pendingDeletedOrderIds.delete(id);
       cloudDeletedOrderIds.delete(id);
       sharedDeletedOrderIds.delete(id);
+      orderTombstoneIds.delete(id);
       refreshDeletedOrderIds();
       deletedOrders=deletedOrders.filter(item=>String(item.orderId||item.order?.id||'')!==id);
       if(!orders.some(order=>String(order.id)===id))orders.unshift(restoredOrder);
