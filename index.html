@@ -11380,6 +11380,20 @@ body.partner-account #recentClientsBox{display:none!important}
   observer.observe(document.documentElement,{childList:true,subtree:true});sync();
 })();
 </script>
+<script id="sphera-desktop-order-sync-timeout-fix">
+(()=>{
+  'use strict';
+  const immediateSave=window.SPHERA_saveOrderNow;
+  if(typeof immediateSave!=='function')return;
+
+  window.SPHERA_saveOrderNow=function(order){
+    const sync=Promise.resolve().then(()=>immediateSave.call(this,order));
+    if(matchMedia('(max-width:900px)').matches)return sync;
+    const timeout=new Promise(resolve=>setTimeout(()=>resolve(false),4500));
+    return Promise.race([sync,timeout]);
+  };
+})();
+</script>
 
 <style id="sphera-mobile-requested-optimizations-v2">
 @media screen and (max-width:760px){
