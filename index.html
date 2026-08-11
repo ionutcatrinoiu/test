@@ -11115,6 +11115,126 @@ body.partner-account #recentClientsBox{display:none!important}
  setTimeout(fix,0);
 })();
 </script>
+
+
+<!-- SPHERA mobile v14: client cards + add-client modal visual repair only -->
+<style id="sphera-mobile-v14-client-ui-fix">
+@media screen and (max-width:760px){
+  /* Pagina Clienți: păstrăm sursa tabelară doar pentru logică, afișăm cardurile mobile. */
+  #clientsPage .card:has(#clientRows) .table-wrap,
+  #clientsPage .table-wrap:has(#clientRows){display:none!important;}
+  #clientsPage .mobile-client-cards{
+    display:grid!important;
+    grid-template-columns:1fr!important;
+    gap:12px!important;
+    width:100%!important;
+    margin:16px 0 0!important;
+    padding:0!important;
+    overflow:visible!important;
+  }
+  #clientsPage .mobile-client-card{
+    display:block!important;
+    position:relative!important;
+    width:100%!important;
+    min-width:0!important;
+    box-sizing:border-box!important;
+    background:#fff!important;
+    border:1px solid #dce4ee!important;
+    border-radius:18px!important;
+    padding:16px 58px 16px 16px!important;
+    overflow:hidden!important;
+    box-shadow:0 4px 14px rgba(16,24,40,.035)!important;
+  }
+  #clientsPage .mobile-client-grid{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+    gap:14px 18px!important;
+    width:100%!important;
+  }
+  #clientsPage .mobile-client-grid .full{grid-column:1/-1!important;}
+  #clientsPage .mobile-client-delete{
+    position:absolute!important;
+    top:14px!important;
+    right:14px!important;
+  }
+
+  /* Popup Adaugă client: compact, complet vizibil și scrollabil în interior. */
+  .modal.open:has(#newClientName){
+    padding:calc(env(safe-area-inset-top) + 76px) 12px calc(env(safe-area-inset-bottom) + 86px)!important;
+    align-items:center!important;
+    justify-content:center!important;
+    overflow:hidden!important;
+  }
+  .modal.open:has(#newClientName)>.wizard.alert-card{
+    width:100%!important;
+    max-width:420px!important;
+    max-height:100%!important;
+    height:auto!important;
+    min-height:0!important;
+    margin:auto!important;
+    padding:18px 16px 16px!important;
+    border-radius:22px!important;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+    overscroll-behavior:contain!important;
+    text-align:center!important;
+  }
+  .modal.open:has(#newClientName) .mobile-modal-close{
+    position:sticky!important;
+    top:0!important;
+    margin:0 0 2px auto!important;
+    float:none!important;
+  }
+  .modal.open:has(#newClientName) .alert-icon{
+    width:48px!important;height:48px!important;min-width:48px!important;
+    margin:0 auto 10px!important;border-radius:14px!important;
+  }
+  .modal.open:has(#newClientName) .alert-title{font-size:24px!important;line-height:1.1!important;margin:0 0 8px!important;}
+  .modal.open:has(#newClientName) .alert-text{font-size:14px!important;line-height:1.35!important;margin:0 auto 14px!important;}
+  .modal.open:has(#newClientName) .field{margin:0 0 12px!important;}
+  .modal.open:has(#newClientName) .field label{margin-bottom:6px!important;font-size:13px!important;}
+  .modal.open:has(#newClientName) input,
+  .modal.open:has(#newClientName) select{height:48px!important;min-height:48px!important;border-radius:13px!important;font-size:15px!important;}
+  .modal.open:has(#newClientName) .termene-cui-row{display:grid!important;grid-template-columns:1fr!important;gap:8px!important;}
+  .modal.open:has(#newClientName) #termeneLookupBtn{width:100%!important;min-height:46px!important;margin:0!important;}
+  .modal.open:has(#newClientName) .alert-actions{
+    position:sticky!important;
+    bottom:-16px!important;
+    display:grid!important;
+    grid-template-columns:1fr 1fr!important;
+    gap:8px!important;
+    width:calc(100% + 0px)!important;
+    margin:14px 0 0!important;
+    padding:10px 0 0!important;
+    background:#fff!important;
+    z-index:5!important;
+  }
+  .modal.open:has(#newClientName) .alert-actions .btn{width:100%!important;min-width:0!important;min-height:44px!important;margin:0!important;}
+}
+</style>
+<script id="sphera-mobile-v14-client-card-placement">
+(()=>{
+ const mobile=()=>matchMedia('(max-width:760px)').matches;
+ function place(){
+   if(!mobile())return;
+   const page=document.getElementById('clientsPage');
+   const host=page?.querySelector('.mobile-client-cards');
+   const sourceCard=page?.querySelector('.card:has(#clientRows)');
+   const filterCard=page?.querySelector('.card:has(#clientSearch), .card:has(.clients-filter-row)');
+   if(!page||!host)return;
+   if(sourceCard)sourceCard.style.display='none';
+   if(filterCard && filterCard.nextElementSibling!==host) filterCard.insertAdjacentElement('afterend',host);
+ }
+ const prevRender=window.renderClients;
+ if(typeof prevRender==='function')window.renderClients=function(){const r=prevRender.apply(this,arguments);requestAnimationFrame(place);return r};
+ const prevShow=window.showPage;
+ if(typeof prevShow==='function')window.showPage=function(){const r=prevShow.apply(this,arguments);requestAnimationFrame(place);return r};
+ document.addEventListener('DOMContentLoaded',()=>setTimeout(place,120));
+ document.addEventListener('click',()=>requestAnimationFrame(place),true);
+ setTimeout(place,350);
+})();
+</script>
+
 </body>
 </html>
 
