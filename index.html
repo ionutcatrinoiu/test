@@ -11008,6 +11008,25 @@ body.partner-account #recentClientsBox{display:none!important}
 })();
 </script>
 
+
+<style id="sphera-mobile-v7-alignment-fix">
+@media (max-width:900px){
+  /* Clienți: păstrează butonul aliniat cu titlul, dar creează spațiu clar față de card. */
+  #clientsPage>.card:first-of-type{margin-top:14px!important;}
+
+  /* Popup: butonul de închidere stă exclusiv în dreapta sus. */
+  #modal.modal.open>.wizard>.mobile-modal-close,
+  .modal.open>.wizard>.mobile-modal-close{
+    display:flex!important;
+    margin:0 0 6px auto!important;
+    margin-left:auto!important;
+    margin-right:0!important;
+    align-self:flex-end!important;
+    left:auto!important;
+    right:0!important;
+  }
+}
+</style>
 </body>
 </html>
 
