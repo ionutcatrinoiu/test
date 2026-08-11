@@ -2762,8 +2762,17 @@ function clearOrders(){if(!isAdmin())return;showAppConfirm({title:'Ștergere com
 function deletedTimestamp(value){
  if(value&&typeof value.toDate==='function')return value.toDate().getTime();
  if(value&&typeof value.seconds==='number')return value.seconds*1000+Math.floor(Number(value.nanoseconds||0)/1000000);
+ if(value&&typeof value._seconds==='number')return value._seconds*1000+Math.floor(Number(value._nanoseconds||0)/1000000);
+ if(typeof value==='number'&&Number.isFinite(value))return value<100000000000?value*1000:value;
+ if(typeof value==='string'&&/^\d+$/.test(value.trim())){
+  const numeric=Number(value);
+  return numeric<100000000000?numeric*1000:numeric;
+ }
  const parsed=Date.parse(value||'');
  return Number.isFinite(parsed)?parsed:0;
+}
+function deletedOrderSortTime(item){
+ return Math.max(deletedTimestamp(item?.deletedAtMs),deletedTimestamp(item?.deletedAt));
 }
 function archiveDeletedOrderLocally(order,details={}){
  if(!order)return;
@@ -2771,6 +2780,7 @@ function archiveDeletedOrderLocally(order,details={}){
   order:JSON.parse(JSON.stringify(order)),
   orderId:String(order.id||''),
   deletedAt:details.deletedAt||new Date().toISOString(),
+  deletedAtMs:details.deletedAtMs||Date.now(),
   deletedBy:details.deletedBy||currentUser?.name||currentUser?.username||'Utilizator',
   deletedByUid:details.deletedByUid||currentUser?.uid||''
  };
@@ -2815,7 +2825,11 @@ function renderDeletedOrders(){
  if(clearButton)clearButton.classList.toggle('hide',!isAdmin());
  const card=document.getElementById('deletedOrdersCard');
  if(card)card.classList.toggle('admin-history',isAdmin());
- const list=(deletedOrders||[]).filter(item=>item?.order&&canViewDeletedOrder(item.order)).sort((a,b)=>deletedTimestamp(b.deletedAt)-deletedTimestamp(a.deletedAt));
+ const list=(deletedOrders||[]).filter(item=>item?.order&&canViewDeletedOrder(item.order)).sort((a,b)=>{
+  const timeDifference=deletedOrderSortTime(b)-deletedOrderSortTime(a);
+  if(timeDifference)return timeDifference;
+  return String(b.orderId||b.order?.id||'').localeCompare(String(a.orderId||a.order?.id||''),'ro',{numeric:true});
+ });
  const count=document.getElementById('deletedOrdersCount');
  if(count)count.textContent=String(list.length);
  body.innerHTML=list.map(item=>{
@@ -4761,6 +4775,7 @@ cursor:pointer;
       orderId:String(order.id||''),
       order:cleanOrderForCloud(order),
       deletedAt:details.deletedAt||new Date().toISOString(),
+      deletedAtMs:details.deletedAtMs||Date.now(),
       deletedBy:details.deletedBy||currentUser?.name||currentUser?.username||'Utilizator',
       deletedByUid:details.deletedByUid||auth.currentUser?.uid||''
     };
@@ -4854,6 +4869,7 @@ cursor:pointer;
           orderId:String(id),
           order:deletedOrder,
           deletedAt:firebase.firestore.FieldValue.serverTimestamp(),
+          deletedAtMs:Date.now(),
           deletedBy:auth.currentUser.uid,
           deletedByName:currentUser?.name||currentUser?.username||'Utilizator'
         },{merge:true});
@@ -4999,6 +5015,7 @@ cursor:pointer;
         orderId,
         order:deletedOrder?cleanOrderForCloud(deletedOrder):null,
         deletedAt:firebase.firestore.FieldValue.serverTimestamp(),
+        deletedAtMs:Date.now(),
         deletedBy:auth.currentUser.uid,
         deletedByName:currentUser?.name||currentUser?.username||'Utilizator'
       },{merge:true});
