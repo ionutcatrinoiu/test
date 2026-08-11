@@ -11217,3 +11217,100 @@ body.partner-account #recentClientsBox{display:none!important}
  const oldStatus=window.SPHERA_renderStatusOrders;window.SPHERA_renderStatusOrders=function(){const r=oldStatus&&oldStatus.apply(this,arguments);setTimeout(statusMobile,0);return r};
 })();
 </script>
+
+<style id="sphera-mobile-v4-critical-fixes">
+@media (max-width:760px){
+  /* Wizardul rămâne complet între headerul SPHERA și bara Safari. */
+  #modal.modal.open{position:fixed!important;top:86px!important;right:0!important;bottom:104px!important;left:0!important;width:auto!important;height:auto!important;inset:86px 0 104px 0!important;padding:10px 12px!important;align-items:center!important;justify-content:center!important;overflow:hidden!important}
+  #modal.modal.open>.wizard{width:100%!important;max-width:calc(100vw - 24px)!important;max-height:100%!important;height:auto!important;margin:auto!important;overflow-y:auto!important;overflow-x:hidden!important;padding:18px 16px 16px!important}
+  #modal .icon-btns{position:sticky!important;bottom:-1px!important;margin-top:16px!important;padding:12px 0 2px!important;background:linear-gradient(to top,#fff 78%,rgba(255,255,255,.86))!important}
+
+  /* Prescripție progresivă. Toate valorile încap fără scroll orizontal. */
+  #modal .rx-grid.has-add{grid-template-columns:28px repeat(4,minmax(0,1fr)) 28px!important;gap:4px!important;width:100%!important;overflow:visible!important}
+  #modal .rx-grid.no-add{grid-template-columns:28px repeat(3,minmax(0,1fr)) 28px!important;gap:5px!important;width:100%!important;overflow:visible!important}
+  #modal .rx-grid .rx-field{width:100%!important;min-width:0!important;height:44px!important;padding:6px 2px!important;font-size:13px!important}
+  #modal .rx-grid .rx-head{font-size:9px!important;overflow:hidden!important;text-overflow:ellipsis!important}
+  #modal .rx-grid .eye-line{font-size:11px!important}
+  #modal .rx-grid .icon-btn{width:27px!important;min-width:27px!important;height:27px!important}
+  #modal .rx-grid .icon-btn svg{width:12px!important;height:12px!important}
+
+  /* Prisma se afișează pe două blocuri clare, fără scroll lateral. */
+  #modal .rx-grid.prism-active{display:grid!important;grid-template-columns:28px repeat(5,minmax(0,1fr)) 28px!important;gap:4px!important;width:100%!important;max-width:100%!important;overflow:visible!important;padding-bottom:0!important}
+  #modal .rx-grid.prism-active .rx-field{font-size:12px!important;padding:5px 1px!important}
+  #modal .rx-grid.prism-active .rx-head{font-size:8px!important;letter-spacing:-.15px!important}
+  #modal .prism-toggle-row{padding:8px 10px!important;margin:8px 0 12px!important;background:#f7f9fc!important;border:1px solid #e4e7ec!important;border-radius:12px!important}
+
+  /* În Clienți rămâne un singur buton, cel din dreapta. */
+  body:has(#clientsPage:not(.hide)) #newClientBtn{display:none!important}
+  #clientsPage .mobile-add-client-btn{display:inline-flex!important;align-items:center!important;justify-content:center!important}
+
+  /* Gândăcel simplu, fără contur, lângă Deconectare. */
+  .mobile-account-panel .mobile-bug-btn{width:34px!important;height:34px!important;min-width:34px!important;padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important;color:#e11d48!important;display:inline-flex!important;align-items:center!important;justify-content:center!important}
+  .mobile-account-panel .mobile-bug-btn svg{width:22px!important;height:22px!important;fill:none!important;stroke:currentColor!important;stroke-width:2!important}
+  .mobile-account-panel .mobile-account-actions{display:flex!important;align-items:center!important;gap:8px!important;margin-left:auto!important}
+  .bug-report-modal .bug-mobile-upload{display:flex!important;align-items:center!important;justify-content:center!important;width:100%!important;min-height:44px!important;border:1px solid #d0d5dd!important;border-radius:12px!important;background:#fff!important;color:#344054!important;font-weight:800!important;cursor:pointer!important}
+  .bug-report-modal .bug-mobile-file{display:none!important}
+}
+</style>
+<script id="sphera-mobile-v4-critical-runtime">
+(function(){
+ 'use strict';
+ const isMobile=()=>matchMedia('(max-width:760px)').matches;
+ const esc4=v=>String(v??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+ /* Repară finalizarea comenzilor cu design diferit. Versiunile ulterioare ale createOrder au suprascris hook-ul inițial. */
+ const createBeforeMixedFix=window.createOrder;
+ window.createOrder=async function(){
+   if(!isMobile()||!draft?.mixedDesign||!draft?.eyeProducts)return await createBeforeMixedFix.apply(this,arguments);
+   const snapshot=JSON.parse(JSON.stringify(draft.eyeProducts));
+   const od=snapshot.od||{};
+   ['product','design','index','geometry','material','materialColor','treatment'].forEach(k=>{if(od[k]!==undefined)draft[k]=od[k]||''});
+   const before=new Set((orders||[]).map(o=>String(o.id)));
+   const result=await createBeforeMixedFix.apply(this,arguments);
+   const created=(orders||[]).find(o=>!before.has(String(o.id)));
+   if(created){created.mixedDesign=true;created.eyeProducts=snapshot;try{save()}catch(_){ }try{render()}catch(_){ }}
+   return result;
+ };
+
+ function placeMobileBug(){
+   if(!isMobile())return;
+   const panel=document.querySelector('.mobile-account-panel');
+   const logout=panel?.querySelector('.mobile-logout-btn');
+   if(!panel||!logout)return;
+   let actions=panel.querySelector('.mobile-account-actions');
+   if(!actions){actions=document.createElement('div');actions.className='mobile-account-actions';logout.before(actions);actions.appendChild(logout)}
+   if(!actions.querySelector('.mobile-bug-btn')){
+     const b=document.createElement('button');b.type='button';b.className='mobile-bug-btn';b.title='Raportează un bug';b.setAttribute('aria-label','Raportează un bug');
+     b.innerHTML='<svg viewBox="0 0 24 24"><path d="M8 8.5h8M9 4l1.5 3M15 4l-1.5 3M6 12H3M21 12h-3M7 17l-3 2M17 17l3 2M7 9v6a5 5 0 0 0 10 0V9a5 5 0 0 0-10 0Z"/></svg>';
+     b.onclick=()=>window.openBugDialog();actions.insertBefore(b,logout);
+   }
+ }
+
+ function fileToSmallDataUrl(file){return new Promise((resolve,reject)=>{if(!file)return resolve('');if(!file.type.startsWith('image/'))return reject(new Error('Selectează o imagine.'));if(file.size>12*1024*1024)return reject(new Error('Imaginea este prea mare.'));const r=new FileReader();r.onerror=()=>reject(new Error('Imaginea nu poate fi citită.'));r.onload=()=>{const img=new Image();img.onerror=()=>reject(new Error('Imaginea nu poate fi procesată.'));img.onload=()=>{const max=1400,scale=Math.min(1,max/Math.max(img.width,img.height)),c=document.createElement('canvas');c.width=Math.max(1,Math.round(img.width*scale));c.height=Math.max(1,Math.round(img.height*scale));c.getContext('2d').drawImage(img,0,0,c.width,c.height);resolve(c.toDataURL('image/jpeg',.78))};img.src=r.result};r.readAsDataURL(file)})}
+
+ /* Pe mobil raportarea are buton real pentru încărcarea imaginii. */
+ const desktopBugDialog=window.openBugDialog;
+ window.openBugDialog=function(){
+   if(!isMobile())return desktopBugDialog.apply(this,arguments);
+   document.querySelector('.bug-report-modal')?.remove();
+   const wrap=document.createElement('div');wrap.className='modal open bug-report-modal';
+   wrap.innerHTML='<div class="wizard alert-card bug-form" style="max-width:540px"><div class="alert-icon" style="background:#fff1f1;color:#f04438">🐞</div><div class="alert-title">Raportează un bug</div><div class="alert-text">Descrie problema și atașează o imagine, dacă este utilă.</div><div class="field" style="text-align:left"><label>Descriere</label><textarea id="bugDescription" placeholder="Spune ce ai făcut și ce rezultat ai observat."></textarea></div><div class="field" style="text-align:left"><label>Imagine opțională</label><input class="bug-mobile-file" id="bugMobileFile" type="file" accept="image/*"><label class="bug-mobile-upload" for="bugMobileFile">Încarcă imagine</label><div class="bug-upload-name" id="bugMobileName"></div><img class="bug-screenshot-preview" id="bugMobilePreview" alt="Previzualizare"><div class="err" id="bugError"></div></div><div class="alert-actions"><button class="btn cancel">Anulează</button><button class="btn ok">Trimite</button></div></div>';
+   document.body.appendChild(wrap);let screenshot='';const file=wrap.querySelector('#bugMobileFile'),preview=wrap.querySelector('#bugMobilePreview'),name=wrap.querySelector('#bugMobileName'),err=wrap.querySelector('#bugError');
+   file.onchange=async()=>{try{const f=file.files?.[0];screenshot=await fileToSmallDataUrl(f);name.textContent=f?.name||'';preview.src=screenshot;preview.style.display=screenshot?'block':'none'}catch(e){screenshot='';err.textContent=e.message}};
+   wrap.querySelector('.cancel').onclick=()=>wrap.remove();
+   wrap.querySelector('.ok').onclick=async()=>{const description=String(wrap.querySelector('#bugDescription').value||'').trim();if(description.length<8){err.textContent='Descrie problema în cel puțin 8 caractere.';return}const item={id:'BUG'+Date.now(),description,screenshot,userName:currentUser?.name||currentUser?.username||'Utilizator',username:currentUser?.username||'',role:currentUser?.role||'',center:currentUser?.center||'',createdAt:Date.now(),status:'Nou'};let list=[];try{list=JSON.parse(localStorage.getItem('sphera_bug_reports_v1')||'[]')}catch(_){}list.unshift(item);try{localStorage.setItem('sphera_bug_reports_v1',JSON.stringify(list.slice(0,200)))}catch(e){err.textContent='Imaginea este prea mare pentru stocare.';return}try{if(window.SPHERA_DB)await window.SPHERA_DB.collection('bugReports').doc(item.id).set(item);else if(typeof db!=='undefined')await db.collection('bugReports').doc(item.id).set(item)}catch(e){err.textContent='Raportul nu a putut fi salvat online.';return}wrap.remove();try{renderBugReports()}catch(_){}showAppConfirm({title:'Raport trimis',text:'Raportarea ta a fost înregistrată.',confirmText:'OK'})};
+ };
+
+ function tuneMobilePrescription(){
+   if(!isMobile()||typeof step==='undefined'||step!==2)return;
+   const grid=document.querySelector('#modal.open .rx-grid');if(!grid)return;
+   grid.querySelectorAll('input').forEach(input=>{if(input.classList.contains('rx-field'))input.setAttribute('autocomplete','off')});
+ }
+ const drawBeforeV4=window.drawStep;window.drawStep=function(){const r=drawBeforeV4&&drawBeforeV4.apply(this,arguments);requestAnimationFrame(tuneMobilePrescription);return r};
+
+ const showBeforeV4=window.showPage;window.showPage=function(){const r=showBeforeV4&&showBeforeV4.apply(this,arguments);requestAnimationFrame(placeMobileBug);return r};
+ document.addEventListener('DOMContentLoaded',()=>setTimeout(placeMobileBug,50));
+ window.addEventListener('resize',placeMobileBug);
+ setTimeout(placeMobileBug,300);
+})();
+</script>
