@@ -14725,5 +14725,487 @@ body.partner-account #recentClientsBox{display:none!important}
   .top-actions>.btn{font-size:12px!important}
 }
 </style>
+<style id="sphera-mobile-order-cards-style">
+.mobile-rx-cards{display:none}
+
+@media screen and (max-width:760px){
+  #ordersListBox>.table-wrap{display:none!important}
+
+  #dashboardOrdersCard,
+  #ordersListBox{
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    overflow:hidden!important;
+  }
+
+  .mobile-rx-cards{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr)!important;
+    gap:10px!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    overflow:visible!important;
+  }
+
+  .mobile-rx-empty{
+    padding:24px 14px!important;
+    color:#667085!important;
+    background:#fff!important;
+    border:1px solid #e4e7ec!important;
+    border-radius:18px!important;
+    text-align:center!important;
+    font-size:13px!important;
+    font-weight:600!important;
+  }
+
+  .mobile-rx-card{
+    position:relative!important;
+    display:block!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    margin:0!important;
+    padding:14px 13px 16px!important;
+    overflow:hidden!important;
+    color:#101828!important;
+    background:#fff!important;
+    border:1px solid #dce3eb!important;
+    border-radius:18px!important;
+    box-shadow:0 12px 28px rgba(16,24,40,.055)!important;
+    cursor:pointer!important;
+    -webkit-tap-highlight-color:transparent!important;
+  }
+
+  .mobile-rx-card:focus-visible{
+    outline:3px solid rgba(22,93,255,.22)!important;
+    outline-offset:2px!important;
+  }
+
+  .mobile-rx-card.mobile-rx-delayed{border-color:#ffd2ce!important}
+
+  .mobile-rx-card-head{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) auto!important;
+    gap:10px!important;
+    width:100%!important;
+    min-width:0!important;
+    align-items:start!important;
+  }
+
+  .mobile-rx-code-wrap{min-width:0!important}
+
+  .mobile-rx-label{
+    display:block!important;
+    margin:0 0 4px!important;
+    color:#667085!important;
+    font-size:9px!important;
+    line-height:1.15!important;
+    font-weight:900!important;
+    letter-spacing:.15px!important;
+    text-transform:uppercase!important;
+  }
+
+  .mobile-rx-code{
+    display:block!important;
+    max-width:100%!important;
+    color:#101828!important;
+    font-size:18px!important;
+    line-height:1.05!important;
+    font-weight:950!important;
+    letter-spacing:.2px!important;
+    overflow-wrap:anywhere!important;
+  }
+
+  .mobile-rx-actions{
+    display:flex!important;
+    min-width:0!important;
+    align-items:center!important;
+    justify-content:flex-end!important;
+    gap:8px!important;
+  }
+
+  .mobile-rx-promo{
+    margin-right:1px!important;
+    color:#101828!important;
+    font-size:14px!important;
+    line-height:1!important;
+    font-weight:500!important;
+    white-space:nowrap!important;
+  }
+
+  .mobile-rx-action{
+    display:inline-flex!important;
+    width:36px!important;
+    height:36px!important;
+    min-width:36px!important;
+    min-height:36px!important;
+    flex:0 0 36px!important;
+    padding:0!important;
+    align-items:center!important;
+    justify-content:center!important;
+    border-radius:50%!important;
+    box-shadow:none!important;
+  }
+
+  .mobile-rx-action svg{
+    width:18px!important;
+    height:18px!important;
+    fill:none!important;
+    stroke:currentColor!important;
+    stroke-width:2.2!important;
+    stroke-linecap:round!important;
+    stroke-linejoin:round!important;
+  }
+
+  .mobile-rx-status{
+    color:#fff!important;
+    background:#165dff!important;
+    border:1px solid #165dff!important;
+  }
+
+  .mobile-rx-status.delivered{
+    color:#fff!important;
+    background:#12b76a!important;
+    border-color:#12b76a!important;
+  }
+
+  .mobile-rx-delete{
+    color:#f04438!important;
+    background:#fff7f6!important;
+    border:1px solid #ffc9c4!important;
+  }
+
+  .mobile-rx-meta{
+    display:grid!important;
+    grid-template-columns:minmax(0,.78fr) minmax(0,1.55fr)!important;
+    gap:13px!important;
+    width:100%!important;
+    min-width:0!important;
+    margin-top:12px!important;
+  }
+
+  .mobile-rx-field{min-width:0!important}
+
+  .mobile-rx-value{
+    display:block!important;
+    min-width:0!important;
+    color:#101828!important;
+    font-size:13px!important;
+    line-height:1.25!important;
+    font-weight:800!important;
+    white-space:normal!important;
+    overflow-wrap:anywhere!important;
+  }
+
+  .mobile-rx-section{
+    width:100%!important;
+    min-width:0!important;
+    margin-top:13px!important;
+    padding-top:12px!important;
+    border-top:1px solid #e4e7ec!important;
+  }
+
+  .mobile-rx-product-name{
+    display:block!important;
+    color:#101828!important;
+    font-size:14px!important;
+    line-height:1.3!important;
+    font-weight:900!important;
+    white-space:normal!important;
+    overflow-wrap:anywhere!important;
+  }
+
+  .mobile-rx-product-detail{
+    display:block!important;
+    margin-top:3px!important;
+    color:#475467!important;
+    font-size:14px!important;
+    line-height:1.3!important;
+    font-weight:600!important;
+    white-space:normal!important;
+    overflow-wrap:anywhere!important;
+  }
+
+  .mobile-rx-product-line+.mobile-rx-product-line{margin-top:7px!important}
+
+  .mobile-rx-prescription{
+    display:grid!important;
+    width:100%!important;
+    min-width:0!important;
+    margin-top:8px!important;
+    align-items:center!important;
+  }
+
+  .mobile-rx-prescription.has-add{
+    grid-template-columns:44px repeat(4,minmax(0,1fr))!important;
+  }
+
+  .mobile-rx-prescription.no-add{
+    grid-template-columns:44px repeat(3,minmax(0,1fr))!important;
+  }
+
+  .mobile-rx-rx-head,
+  .mobile-rx-eye,
+  .mobile-rx-rx-value{
+    display:flex!important;
+    min-width:0!important;
+    min-height:25px!important;
+    padding:5px 3px!important;
+    align-items:center!important;
+    justify-content:center!important;
+    border-bottom:1px solid #e4e7ec!important;
+    text-align:center!important;
+  }
+
+  .mobile-rx-rx-head{
+    color:#667085!important;
+    font-size:9px!important;
+    line-height:1!important;
+    font-weight:800!important;
+  }
+
+  .mobile-rx-eye{
+    justify-content:flex-start!important;
+    color:#475467!important;
+    font-size:11px!important;
+    font-weight:900!important;
+  }
+
+  .mobile-rx-rx-value{
+    color:#101828!important;
+    font-size:12px!important;
+    line-height:1.05!important;
+    font-weight:700!important;
+    white-space:nowrap!important;
+  }
+
+  .mobile-rx-inline-row{
+    display:flex!important;
+    width:100%!important;
+    min-width:0!important;
+    gap:6px!important;
+    margin-top:11px!important;
+    padding-top:10px!important;
+    align-items:flex-start!important;
+    border-top:1px solid #e4e7ec!important;
+  }
+
+  .mobile-rx-inline-label{
+    flex:0 0 auto!important;
+    color:#667085!important;
+    font-size:9px!important;
+    line-height:1.35!important;
+    font-weight:900!important;
+    letter-spacing:.1px!important;
+    text-transform:uppercase!important;
+  }
+
+  .mobile-rx-inline-value{
+    min-width:0!important;
+    color:#101828!important;
+    font-size:12px!important;
+    line-height:1.35!important;
+    font-weight:700!important;
+    white-space:normal!important;
+    overflow-wrap:anywhere!important;
+  }
+
+  .mobile-rx-prism{color:#475467!important}
+
+  .mobile-rx-card.v137-group-row{
+    background:#fff!important;
+    border-color:var(--mobile-group-accent,#b7ccff)!important;
+  }
+
+  .mobile-rx-card.v137-group-tone-0{--mobile-group-accent:#a8cf6a;--mobile-group-soft:#effbdd}
+  .mobile-rx-card.v137-group-tone-1{--mobile-group-accent:#73b6e6;--mobile-group-soft:#e8f5ff}
+  .mobile-rx-card.v137-group-tone-2{--mobile-group-accent:#d28eb1;--mobile-group-soft:#fff0f7}
+  .mobile-rx-card.v137-group-tone-3{--mobile-group-accent:#e4aa6b;--mobile-group-soft:#fff2e4}
+
+  .mobile-rx-card.v137-group-start{
+    box-shadow:0 10px 0 var(--mobile-group-soft),0 12px 28px rgba(16,24,40,.055)!important;
+  }
+}
+
+@media screen and (max-width:390px){
+  .mobile-rx-card{padding-right:11px!important;padding-left:11px!important}
+  .mobile-rx-code{font-size:16px!important}
+  .mobile-rx-actions{gap:6px!important}
+  .mobile-rx-action{width:34px!important;height:34px!important;min-width:34px!important;min-height:34px!important;flex-basis:34px!important}
+  .mobile-rx-promo{font-size:12px!important}
+  .mobile-rx-value{font-size:12px!important}
+  .mobile-rx-product-name,.mobile-rx-product-detail{font-size:13px!important}
+  .mobile-rx-prescription.has-add{grid-template-columns:38px repeat(4,minmax(0,1fr))!important}
+  .mobile-rx-prescription.no-add{grid-template-columns:38px repeat(3,minmax(0,1fr))!important}
+  .mobile-rx-rx-value{font-size:11px!important;padding-right:1px!important;padding-left:1px!important}
+}
+</style>
+<script id="sphera-mobile-order-cards-script">
+(function(){
+  'use strict';
+
+  const clean=value=>String(value??'').trim();
+  const digits=value=>clean(value).replace(/\D/g,'');
+  const safe=value=>typeof esc==='function'?esc(clean(value)):clean(value).replace(/[&<>"']/g,character=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
+  const statusIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>';
+  const trashIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M6 6l1 14h10l1-14"></path><path d="M10 10v6M14 10v6"></path></svg>';
+
+  function orderList(){
+    const body=document.getElementById('orderRows');
+    if(!body||typeof orders==='undefined')return [];
+    const byCode=new Map((orders||[]).map(order=>[digits(order?.code),order]));
+    return [...body.rows].map(row=>{
+      if(!row.cells.length||row.cells[0]?.hasAttribute('colspan'))return null;
+      return byCode.get(digits(row.cells[0]?.textContent));
+    }).filter(Boolean);
+  }
+
+  function centerLabel(order){
+    try{return typeof processingCenterLabel==='function'?processingCenterLabel(order):clean(order?.center)}catch(_){return clean(order?.center)}
+  }
+
+  function clientLabel(order){
+    const name=clean(order?.client?.name);
+    const point=clean(order?.clientWorkPoint||order?.workPoint||order?.client?.workPoint);
+    return point&& !name.toLocaleLowerCase('ro-RO').endsWith((' - '+point).toLocaleLowerCase('ro-RO'))?name+' - '+point:name;
+  }
+
+  function productLines(order){
+    let summary='';
+    try{summary=typeof window.productSummary==='function'?window.productSummary(order):''}catch(_){}
+    if(!summary){
+      summary=[order?.design,order?.index,order?.material,order?.materialColor,order?.treatment].filter(value=>clean(value)).join(' ');
+    }
+    const category=clean(order?.product);
+    return clean(summary).split(/\n+/).filter(Boolean).map((line,index)=>{
+      const match=line.match(/\b\d\.\d{2}\b/);
+      let name=match&&match.index!==undefined?line.slice(0,match.index).trim():line;
+      const detail=match&&match.index!==undefined?line.slice(match.index).trim():'';
+      if(index===0&&category&&['monofocal','bifocal','progresiv'].includes(category.toLocaleLowerCase('ro-RO'))&&!name.toLocaleLowerCase('ro-RO').startsWith(category.toLocaleLowerCase('ro-RO'))){
+        name=category+' '+name;
+      }
+      return {name,detail};
+    });
+  }
+
+  function axis(value){
+    try{return typeof axisDisplay==='function'?axisDisplay(value):String(Number(clean(value).replace(/\D/g,''))||0).padStart(3,'0')}catch(_){return '000'}
+  }
+
+  function prescription(order){
+    const rx=order?.rx||{};
+    const eyes=[];
+    if(rx.odActive!==false)eyes.push({eye:'OD',sph:clean(rx.odSph)||'+0.00',cyl:clean(rx.odCyl)||'+0.00',ax:axis(rx.odAx),add:clean(rx.odAdd)});
+    if(rx.osActive!==false)eyes.push({eye:'OS',sph:clean(rx.osSph)||'+0.00',cyl:clean(rx.osCyl)||'+0.00',ax:axis(rx.osAx),add:clean(rx.osAdd)});
+    const hasAdd=eyes.some(item=>item.add);
+    return {eyes,hasAdd};
+  }
+
+  function prismText(order){
+    const rx=order?.rx||{},parts=[];
+    if(clean(rx.odPrism))parts.push('OD '+clean(rx.odPrism)+(clean(rx.odBase)?' bază '+clean(rx.odBase):''));
+    if(clean(rx.osPrism))parts.push('OS '+clean(rx.osPrism)+(clean(rx.osBase)?' bază '+clean(rx.osBase):''));
+    return parts.join(' · ');
+  }
+
+  function mayDelete(order){
+    try{return typeof canDeleteOrder==='function'&&canDeleteOrder(order)}catch(_){return false}
+  }
+
+  function delayed(order){
+    try{return typeof isDelayedOrder==='function'&&isDelayedOrder(order)}catch(_){return false}
+  }
+
+  function groupState(list,index,toneByGroup){
+    const id=clean(list[index]?.shippingGroupId);
+    if(!id)return '';
+    if(!toneByGroup.has(id))toneByGroup.set(id,toneByGroup.size%4);
+    const previous=clean(list[index-1]?.shippingGroupId),next=clean(list[index+1]?.shippingGroupId);
+    return ['v137-group-row','v137-group-tone-'+toneByGroup.get(id),previous===id?'':'v137-group-start',next===id?'':'v137-group-end'].filter(Boolean).join(' ');
+  }
+
+  function cardHtml(order,index,list,toneByGroup){
+    const rx=prescription(order),product=productLines(order),prism=prismText(order),id=safe(order?.id),promo=clean(order?.promoLabel||order?.promotionLabel||(order?.shippingGroupId?'Promo':''));
+    const productHtml=product.map(line=>'<div class="mobile-rx-product-line"><span class="mobile-rx-product-name">'+safe(line.name)+'</span>'+(line.detail?'<span class="mobile-rx-product-detail">'+safe(line.detail)+'</span>':'')+'</div>').join('');
+    const heads='<span class="mobile-rx-rx-head"></span><span class="mobile-rx-rx-head">Sferă</span><span class="mobile-rx-rx-head">Cilindru</span><span class="mobile-rx-rx-head">Ax</span>'+(rx.hasAdd?'<span class="mobile-rx-rx-head">ADD</span>':'');
+    const rows=rx.eyes.map(item=>'<span class="mobile-rx-eye">'+item.eye+'</span><span class="mobile-rx-rx-value">'+safe(item.sph)+'</span><span class="mobile-rx-rx-value">'+safe(item.cyl)+'</span><span class="mobile-rx-rx-value">'+safe(item.ax)+'</span>'+(rx.hasAdd?'<span class="mobile-rx-rx-value">'+safe(item.add||'')+'</span>':'')).join('');
+    const deleteButton=mayDelete(order)?'<button type="button" class="mobile-rx-action mobile-rx-delete" data-mobile-rx-action="delete" aria-label="Șterge comanda" title="Șterge comanda">'+trashIcon+'</button>':'';
+    const classes=['mobile-rx-card',delayed(order)?'mobile-rx-delayed':'',groupState(list,index,toneByGroup)].filter(Boolean).join(' ');
+    return '<article class="'+classes+'" data-mobile-order-id="'+id+'" data-order-code="'+safe(order?.code)+'" tabindex="0">'
+      +'<div class="mobile-rx-card-head"><div class="mobile-rx-code-wrap"><span class="mobile-rx-label">Cod RX</span><strong class="mobile-rx-code">'+safe(order?.code)+'</strong></div>'
+      +'<div class="mobile-rx-actions">'+(promo?'<span class="mobile-rx-promo">'+safe(promo)+'</span>':'')+'<button type="button" class="mobile-rx-action mobile-rx-status '+(order?.status==='Livrată'?'delivered':'')+'" data-mobile-rx-action="status" aria-label="Schimbă livrarea" title="Schimbă livrarea">'+statusIcon+'</button>'+deleteButton+'</div></div>'
+      +'<div class="mobile-rx-meta"><div class="mobile-rx-field"><span class="mobile-rx-label">Centru</span><strong class="mobile-rx-value">'+safe(centerLabel(order))+'</strong></div><div class="mobile-rx-field"><span class="mobile-rx-label">Client</span><strong class="mobile-rx-value">'+safe(clientLabel(order))+'</strong></div></div>'
+      +'<div class="mobile-rx-section"><span class="mobile-rx-label">Produs</span>'+productHtml+'</div>'
+      +'<div class="mobile-rx-section"><span class="mobile-rx-label">Dioptrii</span><div class="mobile-rx-prescription '+(rx.hasAdd?'has-add':'no-add')+'">'+heads+rows+'</div></div>'
+      +(prism?'<div class="mobile-rx-inline-row mobile-rx-prism"><span class="mobile-rx-inline-label">Prismă:</span><span class="mobile-rx-inline-value">'+safe(prism)+'</span></div>':'')
+      +'<div class="mobile-rx-inline-row"><span class="mobile-rx-inline-label">Pacient:</span><span class="mobile-rx-inline-value">'+safe(order?.patient||'')+'</span></div>'
+      +(clean(order?.notes)?'<div class="mobile-rx-inline-row"><span class="mobile-rx-inline-label">Mențiuni:</span><span class="mobile-rx-inline-value">'+safe(order.notes)+'</span></div>':'')
+      +'</article>';
+  }
+
+  function ensureContainer(){
+    const listBox=document.getElementById('ordersListBox');
+    if(!listBox)return null;
+    let container=listBox.querySelector('.mobile-rx-cards');
+    if(!container){
+      container=document.createElement('div');
+      container.className='mobile-rx-cards';
+      const tableWrap=listBox.querySelector(':scope>.table-wrap');
+      if(tableWrap)tableWrap.insertAdjacentElement('afterend',container);else listBox.appendChild(container);
+      container.addEventListener('click',event=>{
+        const card=event.target.closest('.mobile-rx-card');
+        if(!card)return;
+        const id=card.dataset.mobileOrderId,action=event.target.closest('[data-mobile-rx-action]')?.dataset.mobileRxAction;
+        if(action){
+          event.preventDefault();event.stopPropagation();
+          if(action==='status'&&typeof toggleOrderStatus==='function')toggleOrderStatus(id);
+          if(action==='delete'&&typeof deleteOrder==='function')deleteOrder(id);
+          return;
+        }
+        if(typeof showOrderDetails==='function')showOrderDetails(id);
+      });
+      container.addEventListener('keydown',event=>{
+        if(event.key!=='Enter'&&event.key!==' ')return;
+        if(event.target.closest('[data-mobile-rx-action]'))return;
+        const card=event.target.closest('.mobile-rx-card');
+        if(!card)return;
+        event.preventDefault();
+        if(typeof showOrderDetails==='function')showOrderDetails(card.dataset.mobileOrderId);
+      });
+    }
+    return container;
+  }
+
+  function renderMobileCards(){
+    const container=ensureContainer();
+    if(!container)return;
+    const list=orderList(),tones=new Map();
+    container.innerHTML=list.length?list.map((order,index)=>cardHtml(order,index,list,tones)).join(''):'<div class="mobile-rx-empty">Nu există comenzi pentru filtrul selectat.</div>';
+  }
+
+  let queued=false;
+  function schedule(){
+    if(queued)return;
+    queued=true;
+    requestAnimationFrame(()=>{queued=false;renderMobileCards()});
+  }
+
+  window.SPHERA_renderMobileOrderCards=renderMobileCards;
+  const previousRender=window.render;
+  if(typeof previousRender==='function')window.render=function(){
+    const result=previousRender.apply(this,arguments);
+    schedule();
+    return result;
+  };
+
+  const rows=document.getElementById('orderRows');
+  if(rows)new MutationObserver(schedule).observe(rows,{childList:true});
+  window.addEventListener('resize',schedule);
+  document.addEventListener('DOMContentLoaded',schedule,{once:true});
+  schedule();
+})();
+</script>
 </body>
 </html>
