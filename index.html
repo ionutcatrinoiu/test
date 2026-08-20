@@ -4731,6 +4731,72 @@ cursor:pointer;
     if(r==='custom'||r==='personalizat')return 'custom';
     return 'operator';
   }
+  const CLIENT_TERRITORY_ROUTES=[
+    {center:'Oradea',counties:['Bihor'],cities:['Oradea','Salonta','Marghita','Beiuș','Aleșd','Ștei','Valea lui Mihai']},
+    {center:'Craiova',counties:['Dolj'],cities:['Craiova','Băilești','Calafat','Filiași','Segarcea','Dăbuleni']},
+    {center:'Bacău',counties:['Bacău'],cities:['Bacău','Onești','Moinești','Comănești','Buhuși','Târgu Ocna','Dărmănești','Slănic Moldova']},
+    {center:'Botoșani',counties:['Botoșani','Suceava'],cities:['Botoșani','Dorohoi','Darabani','Săveni','Flămânzi','Bucecea','Ștefănești','Suceava','Fălticeni','Rădăuți','Câmpulung Moldovenesc','Vatra Dornei','Gura Humorului','Siret','Vicovu de Sus']},
+    {center:'Brașov',counties:['Brașov','Galați'],cities:['Brașov','Făgăraș','Săcele','Codlea','Râșnov','Zărnești','Ghimbav','Victoria','Galați','Tecuci','Târgu Bujor','Berești']},
+    {center:'Constanța',counties:['Constanța'],cities:['Constanța','Mangalia','Medgidia','Năvodari','Cernavodă','Eforie','Ovidiu','Murfatlar']},
+    {center:'Piatra-Neamț',counties:['Neamț'],cities:['Piatra-Neamț','Roman','Târgu Neamț','Bicaz','Roznov']},
+    {center:'Ploiești',counties:['Prahova'],cities:['Ploiești','Câmpina','Băicoi','Breaza','Bușteni','Mizil','Sinaia','Urlați','Vălenii de Munte']},
+    {center:'Cluj Napoca',counties:['Cluj'],cities:['Cluj','Cluj-Napoca','Turda','Dej','Câmpia Turzii','Gherla','Huedin']},
+    {center:'București',counties:['București','Ilfov'],cities:['București','Voluntari','Popești-Leordeni','Otopeni','Pantelimon','Buftea','Bragadiru','Chitila','Măgurele']},
+    {center:'Iasi',counties:['Iași'],cities:['Iași','Pașcani','Târgu Frumos','Hârlău','Podu Iloaiei']}
+  ];
+  function routingKey(value){
+    return String(value||'').trim().toLocaleLowerCase('ro-RO').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[-_]+/g,' ').replace(/\s+/g,' ').trim()
+  }
+  function territoryRouteForCenter(center){
+    const target=routingKey(center);
+    return CLIENT_TERRITORY_ROUTES.find(route=>routingKey(route.center)===target)||null
+  }
+  function canonicalRoutingCenter(value){
+    const raw=String(value||'').trim(),target=routingKey(raw);
+    if(!target)return '';
+    const route=CLIENT_TERRITORY_ROUTES.find(item=>routingKey(item.center)===target);
+    if(route)return route.center;
+    const known=[...new Set((CENTERS||[]).map(item=>item?.center).filter(Boolean))];
+    return known.find(center=>routingKey(center)===target)||raw
+  }
+  function routingQueryVariants(values){
+    const result=new Set();
+    (values||[]).forEach(value=>{
+      const raw=String(value||'').trim();if(!raw)return;
+      const plain=raw.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      [raw,plain,raw.toLocaleUpperCase('ro-RO'),plain.toUpperCase()].forEach(item=>{if(item)result.add(item)})
+    });
+    return [...result]
+  }
+  function clientTerritoryQueryValues(center,field='city'){
+    const route=territoryRouteForCenter(center);if(!route)return [];
+    return routingQueryVariants(field==='county'?route.counties:[...route.cities,...route.counties])
+  }
+  function clientTerritoryCenter(client){
+    if(!client)return '';
+    const explicit=client.responsibleCenter||client.deliveryCenter||client.assignedCenter;
+    if(explicit)return canonicalRoutingCenter(explicit);
+    const county=routingKey(client.county),city=routingKey(client.city);
+    const route=CLIENT_TERRITORY_ROUTES.find(item=>{
+      const counties=item.counties.map(routingKey),places=[...item.cities,...item.counties].map(routingKey);
+      return (county&&counties.some(value=>county===value||county.includes(value)))||(city&&places.some(value=>city===value||city.includes(value)))
+    });
+    if(route)return route.center;
+    return canonicalRoutingCenter(client.center||client.createdByCenter||'')
+  }
+  function orderResponsibleCenter(order){
+    if(!order)return '';
+    const explicit=order.responsibleCenter||order.responsibleMountCenter;
+    if(explicit&&routingKey(explicit)!=='extern')return canonicalRoutingCenter(explicit);
+    const destination=String(order.deliveryDestination||'').trim();
+    if(routingKey(destination)==='client'){
+      return clientTerritoryCenter(order.client)||canonicalRoutingCenter(order.mountCenter||order.mount||order.deliveryCenter||order.center||'')
+    }
+    if(destination.toLowerCase().startsWith('center:'))return canonicalRoutingCenter(destination.split(':').slice(1).join(':').trim());
+    return canonicalRoutingCenter(order.deliveryCenter||order.mountCenter||order.mount||order.center||'')
+  }
+  window.SPHERA_CLIENT_TERRITORY_CENTER=clientTerritoryCenter;
+  window.SPHERA_ORDER_RESPONSIBLE_CENTER=orderResponsibleCenter;
   async function findProfile(user,username){
     let snap=await db.collection('users').doc(user.uid).get();
     if(snap.exists)return {id:snap.id,...snap.data()};
@@ -5512,22 +5578,45 @@ cursor:pointer;
         ['delivery',ORDERS_COL.where('deliveryCenter','==',scopedCenter)],
         ['responsible',ORDERS_COL.where('responsibleCenter','==',scopedCenter)]
       ];
+      const addTerritorySources=(field,values)=>{
+        for(let index=0;index<values.length;index+=30){
+          const chunk=values.slice(index,index+30);
+          if(chunk.length)sources.push([field+String(index/30),ORDERS_COL.where('client.'+field,'in',chunk)])
+        }
+      };
+      addTerritorySources('city',clientTerritoryQueryValues(scopedCenter,'city'));
+      addTerritorySources('county',clientTerritoryQueryValues(scopedCenter,'county'));
       const buckets=new Map(),readySources=new Set(),unsubscribers=[];
-      const publish=(snap,sourceName)=>{
-        buckets.set(sourceName,new Map(readSnapshot(snap).map(order=>[String(order.id||''),order])));
-        readySources.add(sourceName);
+      const backfillResponsibilities=()=>{
+        let changed=false;
+        (orders||[]).forEach(order=>{
+          if(routingKey(order?.deliveryDestination)!=='client')return;
+          const responsible=orderResponsibleCenter(order);
+          if(!responsible||routingKey(responsible)==='extern'||routingKey(order.responsibleCenter)===routingKey(responsible))return;
+          order.responsibleCenter=responsible;changed=true
+        });
+        return changed
+      };
+      const publishMerged=cloudChanges=>{
         if(readySources.size<sources.length)return;
         const merged=new Map();
         buckets.forEach(bucket=>bucket.forEach((order,id)=>{if(id)merged.set(id,order)}));
-        applyOrdersFromCloud([...merged.values()],snapshotChanges(snap));
+        applyOrdersFromCloud([...merged.values()],cloudChanges||[]);
+        const responsibilitiesChanged=backfillResponsibilities();
         ordersReady=true;
         setCloudStatus('Cloud: conectat','ok');
-        if(ordersPendingSave)scheduleOrdersSave()
+        if(ordersPendingSave)scheduleOrdersSave();
+        if(responsibilitiesChanged)setTimeout(scheduleOrdersSave,0)
+      };
+      const publish=(snap,sourceName)=>{
+        buckets.set(sourceName,new Map(readSnapshot(snap).map(order=>[String(order.id||''),order])));
+        readySources.add(sourceName);
+        publishMerged(snapshotChanges(snap))
       };
       sources.forEach(([name,source])=>{
         unsubscribers.push(source.onSnapshot(snap=>publish(snap,name),error=>{
           console.error('SPHERA scoped orders listener error',name,error);
-          setCloudStatus('Cloud: acces refuzat','error')
+          buckets.set(name,new Map());readySources.add(name);publishMerged([])
         }))
       });
       unsubscribeOrders=()=>unsubscribers.forEach(stop=>{try{stop()}catch(_){}});
@@ -6496,6 +6585,7 @@ body.viewer-account [data-viewer-write]{display:none!important}
     ];
     const destination=String(order?.deliveryDestination||'').trim();
     if(destination.toLowerCase().startsWith('center:'))values.push(destination.split(':').slice(1).join(':').trim());
+    if(norm(destination)==='client'&&typeof window.SPHERA_ORDER_RESPONSIBLE_CENTER==='function')values.push(window.SPHERA_ORDER_RESPONSIBLE_CENTER(order));
     return values.filter(Boolean)
   }
   function orderVisibleForCenter(order,center){
@@ -13945,6 +14035,10 @@ body.partner-account #recentClientsBox{display:none!important}
     if(created){
       const user=account()||currentUser,uid=text(user?.uid||user?.id||currentUser?.uid||currentUser?.id),username=text(user?.username||currentUser?.username),name=text(user?.name||user?.displayName||currentUser?.name||currentUser?.displayName||username),operatorCode=accountCode();
       Object.assign(created,{createdById:uid,createdByUid:uid,createdByUsername:username,createdByAccount:username,createdByName:name,createdByRole:role(),createdByCenter:text(user?.center||currentUser?.center),createdByOperatorCode:operatorCode,operatorCode:operatorCode});
+      if(clean(created.deliveryDestination)==='client'&&typeof window.SPHERA_ORDER_RESPONSIBLE_CENTER==='function'){
+        const responsible=window.SPHERA_ORDER_RESPONSIBLE_CENTER(created);
+        if(responsible)created.responsibleCenter=responsible
+      }
       if(typeof save==='function')save();if(typeof render==='function')render()
     }
     return result
